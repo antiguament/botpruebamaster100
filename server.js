@@ -46,6 +46,8 @@ let chromiumPath = null;
 
 const possiblePaths = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   '/usr/bin/chromium-browser',
   '/usr/bin/chromium',
   '/usr/bin/google-chrome',
@@ -75,8 +77,6 @@ const puppeteerConfig = {
     '--disable-dev-shm-usage',
     '--disable-accelerated-2d-canvas',
     '--no-first-run',
-    '--no-zygote',
-    '--single-process',
     '--disable-gpu',
     '--disable-extensions'
   ]
@@ -152,7 +152,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3050;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   log(`Servidor corriendo en puerto ${PORT}`);
   log('Inicializando WhatsApp Web...');
