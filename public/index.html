@@ -23,7 +23,7 @@
       border-radius: 20px;
       border: 1px solid rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
-      max-width: 400px;
+      max-width: 500px;
       width: 100%;
     }
     h1 { 
@@ -87,20 +87,57 @@
       word-break: break-all;
     }
     .msg .from { color: #00D4AA; font-weight: bold; }
+    .diagnostics {
+      margin-top: 20px;
+      text-align: left;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 0.8em;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .diagnostics h3 {
+      color: #00D4AA;
+      margin-bottom: 10px;
+    }
+    .log-line {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.7);
+    }
+    .log-line.error { color: #e74c3c; }
     .info {
       margin-top: 20px;
       font-size: 0.85em;
       color: rgba(255,255,255,0.5);
     }
+    #server-info {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      font-size: 0.85em;
+      text-align: left;
+    }
+    #server-info div { margin: 5px 0; }
+    #server-info span { color: #00D4AA; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🤖 Bot WhatsApp Test</h1>
-    <div id="status" class="status loading">Iniciando servidor...</div>
+    <div id="status" class="status loading">Conectando al servidor...</div>
     <img id="qr" src="" alt="QR Code" style="display:none;">
+    <div id="server-info"></div>
     <div id="messages"></div>
+    <div class="diagnostics" id="logs" style="display:none;">
+      <h3>📋 Logs del servidor</h3>
+      <div id="log-content"></div>
+    </div>
     <div class="info">Hostinger Node.js Test</div>
+    <button onclick="fetch('/status').then(r=>r.json()).then(d=>{document.getElementById('logs').style.display='block';document.getElementById('log-content').innerHTML=d.logs.map(l=>'<div class=log-line>'+l+'</div>').join('');document.getElementById('server-info').innerHTML='<div>Node: <span>'+d.node+'</span></div><div>Platform: <span>'+d.platform+'</span></div><div>Memory: <span>'+d.memory+'</span></div><div>Uptime: <span>'+Math.round(d.uptime)+'s</span></div><div>WhatsApp: <span>'+d.whatsappStatus+'</span></div>';})" style="margin-top:15px;padding:10px 20px;background:rgba(0,212,170,0.2);border:1px solid #00D4AA;color:#00D4AA;border-radius:8px;cursor:pointer;font-size:0.9em;">🔍 Diagnosticar</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -117,11 +154,18 @@
     
     socket.on('connect', () => {
       console.log('Conectado al servidor');
+      setStatus('Conectado al servidor, esperando WhatsApp...', 'loading');
+    });
+    
+    socket.on('connect_error', (err) => {
+      console.error('Error de conexion:', err);
+      setStatus('Error de conexion: ' + err.message, 'error');
     });
     
     socket.on('status', (s) => {
+      console.log('Status:', s);
       if (s === 'ready') {
-        setStatus('✅ WhatsApp Conectado!', 'connected');
+        setStatus('WhatsApp Conectado!', 'connected');
         qrImg.style.display = 'none';
         messagesDiv.classList.add('show');
       } else if (s === 'qr') {
@@ -139,20 +183,20 @@
     
     socket.on('ready', () => {
       qrImg.style.display = 'none';
-      setStatus('✅ WhatsApp Conectado!', 'connected');
+      setStatus('WhatsApp Conectado!', 'connected');
       messagesDiv.classList.add('show');
     });
     
     socket.on('authenticated', () => {
-      setStatus('✅ Autenticado! Conectando...', 'connected');
+      setStatus('Autenticado! Conectando...', 'connected');
     });
     
     socket.on('auth_failure', (msg) => {
-      setStatus('❌ Error de autenticación', 'error');
+      setStatus('Error de autenticacion: ' + msg, 'error');
     });
     
     socket.on('disconnected', (reason) => {
-      setStatus('⚠️ Desconectado: ' + reason, 'error');
+      setStatus('Desconectado: ' + reason, 'error');
     });
     
     socket.on('message', (msg) => {
