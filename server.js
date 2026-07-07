@@ -168,14 +168,19 @@ function buildSystemPrompt() {
       if (!cachedKnowledge) cachedKnowledge = {};
     }
   }
-  const knowledge = cachedKnowledge;
-  const customPrompt = knowledge.nexus_system_prompt || `Eres "NEXUS", el asistente virtual de ventas de Agencia Nexus.
+  const k = cachedKnowledge;
+  const customPrompt = k.nexus_system_prompt || `Eres "NEXUS", el asistente virtual de ventas de Agencia Nexus.
 Responde en español de Colombia, con tono profesional, cercano, claro y orientado a ventas.
 Tu objetivo es ayudar a prospectos y clientes a encontrar la solución digital perfecta para su negocio.`;
   const rules = `No inventes datos que no estén en la base de conocimiento.
 Si falta información, invita a escribir por WhatsApp para asesoría personalizada.
 Mantén respuestas breves para WhatsApp, idealmente entre 1 y 4 líneas, salvo que el usuario pida más detalle.`;
-  return `${customPrompt}\n\n${rules}\n\nBase de conocimiento:\n${JSON.stringify(knowledge, null, 2)}`;
+
+  // Enviar SOLO datos esenciales, no todo el JSON
+  const plans = k.catalogos_planes ? JSON.stringify(k.catalogos_planes, null, 2) : '';
+  const faq = k.preguntas_frecuentes ? JSON.stringify(k.preguntas_frecuentes) : '';
+
+  return `${customPrompt}\n\n${rules}\n\nPlanes:\n${plans}\n\nPreguntas frecuentes:\n${faq}`;
 }
 
 // ===== ROUTES =====
@@ -330,7 +335,8 @@ Responde SOLO con el texto refinado, sin explicaciones.`;
         headers: {
           'Authorization': `Bearer ${MISTRAL_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 30000
       });
 
       const refined = response.data.choices[0].message.content;
@@ -558,7 +564,8 @@ async function startBot() {
             headers: {
               'Authorization': `Bearer ${MISTRAL_API_KEY}`,
               'Content-Type': 'application/json'
-            }
+            },
+            timeout: 30000
           });
 
           const reply = response.data.choices[0].message.content;
