@@ -46,14 +46,14 @@ let chromiumPath = null;
 
 const possiblePaths = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   '/usr/bin/chromium-browser',
   '/usr/bin/chromium',
   '/usr/bin/google-chrome',
   '/usr/bin/google-chrome-stable',
   '/opt/google/chrome/chrome',
   '/snap/bin/chromium',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
 ];
 
 for (const p of possiblePaths) {
