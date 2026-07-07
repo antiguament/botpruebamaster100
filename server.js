@@ -452,6 +452,7 @@ function acquireLock() {
   if (fs.existsSync(LOCK_FILE)) {
     try {
       const pid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
+      if (pid === process.pid) return true;
       process.kill(pid, 0);
       log(`Lock: proceso ${pid} activo. Esta instancia NO arrancara WhatsApp.`);
       return false;
