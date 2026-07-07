@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const makeWASocket = require('@whiskeysockets/baileys').default;
-const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, isJidUser } = require('@whiskeysockets/baileys');
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
@@ -274,7 +274,7 @@ async function startBot() {
       if (reconnect) {
         status = 'reconnecting';
         io.emit('status', 'Reconectando...');
-        startBot();
+        setTimeout(() => startBot(), 5000);
       } else {
         status = 'logged_out';
         io.emit('status', 'Sesion cerrada. Elimina auth_info/ y reinicia.');
@@ -300,7 +300,7 @@ async function startBot() {
 
     for (const msg of m.messages) {
       if (msg.key.fromMe) continue;
-      if (!isJidUser(msg.key.remoteJid)) continue;
+      if (!msg.key.remoteJid || !msg.key.remoteJid.endsWith('@c.us')) continue;
 
       const from = msg.key.remoteJid;
       const number = normalizeNumber(from);
