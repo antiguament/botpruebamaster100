@@ -12,6 +12,8 @@
     "type": "commonjs",
     "dependencies": {
         "@whiskeysockets/baileys": "^7.0.0-rc13",
+        "axios": "^1.18.1",
+        "dotenv": "^17.4.2",
         "express": "^5.2.1",
         "qrcode": "^1.5.4",
         "qrcode-terminal": "^0.12.0",

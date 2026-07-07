@@ -6,6 +6,8 @@ const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = r
 const qrcode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
+const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -50,6 +52,13 @@ let predefinedTexts = loadJSON(PREDEFINED_TEXTS_PATH, []);
 let settings = loadJSON(SETTINGS_PATH, { calls: { enabled: true } });
 let botKnowledge = loadJSON(BOT_KNOWLEDGE_PATH, {});
 
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
+const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+
+let cachedKnowledge = null;
+let knowledgeLastLoaded = 0;
+const KNOWLEDGE_CACHE_TTL = 60000;
+
 function saveContacts() { saveJSON(CONTACTS_PATH, contacts); }
 function saveConversations() { saveJSON(CONVERSATIONS_PATH, conversations); }
 function saveSavedContacts() { saveJSON(SAVED_CONTACTS_PATH, savedContacts); }
@@ -65,6 +74,12 @@ function normalizeNumber(value) {
 
 function toChatId(number) {
   return `${normalizeNumber(number)}@c.us`;
+}
+
+function contactEnabled(number) {
+  const num = normalizeNumber(number);
+  const c = contacts.find(x => normalizeNumber(x.number) === num);
+  return c ? c.botEnabled !== false : true;
 }
 
 function createMessageId() {
@@ -94,6 +109,73 @@ function upsertContact(number, name, lastMessage, lastInteraction, incoming = fa
 function emitContacts() {
   contacts.sort((a, b) => new Date(b.lastInteraction || 0) - new Date(a.lastInteraction || 0));
   io.emit('contacts', contacts);
+}
+
+function detectUserContext(message) {
+  const lower = message.toLowerCase();
+  const wisdomKeywords = [
+    'triste', 'preocupado', 'preocupada', 'estresado', 'estresada',
+    'confundido', 'confundida', 'solo', 'sola', 'soledad',
+    'familia', 'familias', 'padres', 'hermanos', 'hijos',
+    'tiempo', 'vida', 'muerte', 'dios', 'dioses', 'orar', 'oración',
+    'esperanza', 'fe', 'amor', 'perdón', 'perdonar',
+    'miedo', 'ansiedad', 'depresión', 'tristeza',
+    'fracaso', 'fracasé', 'perdí', 'no puedo', 'no sé qué hacer',
+    'sentido', 'propósito', 'razón', 'existencia',
+    'ayuda', 'socorro', 'necesito', 'auxilio',
+    'llorar', 'llanto', 'dolor', 'sufrimiento',
+    'cambio', 'transformar', 'crecer', 'aprender',
+    'éxito', 'triunfo', 'logro', 'meta',
+    'decision', 'decidir', 'elegir', 'opciones',
+    'esperar', 'paciencia', 'silencio', 'paz'
+  ];
+  const commercialKeywords = [
+    'plan', 'planes', 'precio', 'precios', 'costo', 'costos',
+    'vender', 'venta', 'ventas', 'comprar', 'compra',
+    'negocio', 'negocios', 'empresa', 'empresas',
+    'página', 'páginas', 'web', 'website', 'sitio',
+    'tienda', 'tiendas', 'ecommerce', 'e-commerce',
+    'demo', 'demos', 'muestra', 'ejemplo',
+    'hosting', 'dominio', 'servidor',
+    'diseño', 'diseñar', 'diseñador',
+    'desarrollo', 'desarrollar', 'programador',
+    'whatsapp', 'api', 'integración',
+    'carrito', 'checkout', 'pago', 'pagos',
+    'facturación', 'facturar', 'invoice',
+    'inventario', 'stock', 'productos',
+    'catálogo', 'seo', 'marketing', 'publicidad',
+    'cms', 'panel', 'dashboard',
+    'soporte', 'mantenimiento',
+    'essential', 'start', 'pro', 'enterprise', 'diamante',
+    '$290', '$490', '$890', '$1.590', '$2.490'
+  ];
+  const wisdomScore = wisdomKeywords.filter(k => lower.includes(k)).length;
+  const commercialScore = commercialKeywords.filter(k => lower.includes(k)).length;
+  if (wisdomScore > commercialScore && wisdomScore >= 1) return 'wisdom';
+  if (commercialScore > wisdomScore && commercialScore >= 1) return 'commercial';
+  if (wisdomScore === commercialScore && wisdomScore > 0) return 'mixed';
+  return 'neutral';
+}
+
+function buildSystemPrompt() {
+  const now = Date.now();
+  if (!cachedKnowledge || (now - knowledgeLastLoaded) > KNOWLEDGE_CACHE_TTL) {
+    try {
+      cachedKnowledge = JSON.parse(fs.readFileSync(BOT_KNOWLEDGE_PATH, 'utf8'));
+      knowledgeLastLoaded = now;
+    } catch (err) {
+      console.error('Error cargando bot-knowledge.json:', err.message);
+      if (!cachedKnowledge) cachedKnowledge = {};
+    }
+  }
+  const knowledge = cachedKnowledge;
+  const customPrompt = knowledge.nexus_system_prompt || `Eres "NEXUS", el asistente virtual de ventas de Agencia Nexus.
+Responde en español de Colombia, con tono profesional, cercano, claro y orientado a ventas.
+Tu objetivo es ayudar a prospectos y clientes a encontrar la solución digital perfecta para su negocio.`;
+  const rules = `No inventes datos que no estén en la base de conocimiento.
+Si falta información, invita a escribir por WhatsApp para asesoría personalizada.
+Mantén respuestas breves para WhatsApp, idealmente entre 1 y 4 líneas, salvo que el usuario pida más detalle.`;
+  return `${customPrompt}\n\n${rules}\n\nBase de conocimiento:\n${JSON.stringify(knowledge, null, 2)}`;
 }
 
 // ===== ROUTES =====
@@ -325,6 +407,65 @@ async function startBot() {
 
       upsertContact(number, name, body, ts, true);
       emitContacts();
+
+      // Auto-respuesta Mistral AI
+      if (MISTRAL_API_KEY && contactEnabled(number)) {
+        try {
+          const userContext = detectUserContext(body);
+          let contextInstruction = '';
+          let maxTokens = 180;
+
+          if (userContext === 'wisdom') {
+            contextInstruction = '\n\n[CONTEXTO: El usuario esta compartiendo algo personal o emocional. Responde con sabiduria, empatia y calidez. No menciones planes ni precios en este momento.]';
+            maxTokens = 250;
+          } else if (userContext === 'commercial') {
+            contextInstruction = '\n\n[CONTEXTO: El usuario esta preguntando por servicios comerciales. Responde con profesionalismo y orientacion a ventas.]';
+            maxTokens = 180;
+          } else if (userContext === 'mixed') {
+            contextInstruction = '\n\n[CONTEXTO: El usuario mezcla temas personales y comerciales. Primero responde lo personal, luego orienta lo comercial si es apropiado.]';
+            maxTokens = 220;
+          }
+
+          const response = await axios.post(MISTRAL_API_URL, {
+            model: 'mistral-tiny',
+            messages: [
+              { role: 'system', content: buildSystemPrompt() + contextInstruction },
+              { role: 'user', content: body }
+            ],
+            max_tokens: maxTokens
+          }, {
+            headers: {
+              'Authorization': `Bearer ${MISTRAL_API_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const reply = response.data.choices[0].message.content;
+          const replyData = {
+            id: createMessageId(), type: 'ai-reply', from: 'IA',
+            number, body: reply, timestamp: new Date().toISOString()
+          };
+
+          await sock.sendMessage(from, { text: reply });
+          io.emit('new-message', replyData);
+          if (!conversations[number]) conversations[number] = [];
+          conversations[number].push(replyData);
+          saveConversations();
+          upsertContact(number, name, reply, replyData.timestamp, false);
+          emitContacts();
+          log(`IA respondio a ${number} [${userContext}]: ${reply}`);
+        } catch (err) {
+          log(`Error IA: ${err.message}`);
+          const errorData = {
+            id: createMessageId(), type: 'error', from: 'IA',
+            number, body: `Error IA: ${err.message}`, timestamp: new Date().toISOString()
+          };
+          io.emit('new-message', errorData);
+          if (!conversations[number]) conversations[number] = [];
+          conversations[number].push(errorData);
+          saveConversations();
+        }
+      }
     }
   });
 }

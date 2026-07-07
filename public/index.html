@@ -43,6 +43,8 @@
         .msg { max-width: 70%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
         .msg.incoming { background: rgba(255,255,255,0.06); color: #e0e6ed; align-self: flex-start; border-bottom-left-radius: 4px; }
         .msg.manual { background: rgba(0,212,255,0.15); color: #e0e6ed; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg.ai-reply { background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2)); color: #e0e6ed; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(139,92,246,0.15); }
+        .msg.error { background: rgba(239,68,68,0.15); color: #fca5a5; align-self: center; border-radius: 12px; }
         .msg .msg-sender { font-size: 10px; color: #00d4ff; font-weight: 600; margin-bottom: 4px; }
         .msg .msg-time { font-size: 9px; color: #4a5a6e; margin-top: 4px; text-align: right; }
 
@@ -192,7 +194,10 @@
             const msgs = conversations[selectedNumber] || [];
             const container = document.getElementById('chatMessages');
             container.innerHTML = msgs.map(m => {
-                const cls = m.type === 'incoming' ? 'incoming' : 'manual';
+                let cls = 'manual';
+                if (m.type === 'incoming') cls = 'incoming';
+                else if (m.type === 'ai-reply') cls = 'ai-reply';
+                else if (m.type === 'error') cls = 'error';
                 const time = new Date(m.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
                 return `<div class="msg ${cls}">
                     <div class="msg-sender">${m.from}</div>
