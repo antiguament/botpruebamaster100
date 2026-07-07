@@ -6,3 +6,4 @@ package-lock.json
 .wwebjs_cache/
 *.log
 .wpp-node-simple/
+.server.lock

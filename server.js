@@ -9,6 +9,23 @@ const fs = require('fs');
 require('dotenv').config();
 const axios = require('axios');
 
+// Guard contra instancias multiples
+const LOCK_FILE = path.join(__dirname, '.server.lock');
+if (fs.existsSync(LOCK_FILE)) {
+  const lockPid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
+  try {
+    process.kill(lockPid, 0);
+    console.log(`Otra instancia activa (PID ${lockPid}). Cerrando esta.`);
+    process.exit(0);
+  } catch (e) {
+    // PID no existe, lock stale
+  }
+}
+fs.writeFileSync(LOCK_FILE, String(process.pid));
+process.on('exit', () => { try { fs.unlinkSync(LOCK_FILE); } catch (e) {} });
+process.on('SIGINT', () => process.exit());
+process.on('SIGTERM', () => process.exit());
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -323,9 +340,22 @@ io.on('connection', (socket) => {
 });
 
 // ===== WHATSAPP BOT =====
+let reconnectAttempts = 0;
+const MAX_RECONNECT = 15;
+let reconnecting = false;
+
 async function startBot() {
+  if (reconnecting) return;
+  reconnecting = true;
+
   const authDir = path.join(__dirname, 'auth_info');
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
+
+  // Cerrar socket viejo si existe
+  if (sock) {
+    try { sock.end(undefined); } catch (e) {}
+    sock = null;
+  }
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
   const { version } = await fetchLatestBaileysVersion();
@@ -338,10 +368,13 @@ async function startBot() {
     markOnlineOnConnect: true,
   });
 
+  reconnecting = false;
+
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      reconnectAttempts = 0;
       qrCodeDataURL = await qrcode.toDataURL(qr);
       status = 'qr';
       io.emit('qr-code', qrCodeDataURL);
@@ -354,9 +387,18 @@ async function startBot() {
       const reconnect = code !== DisconnectReason.loggedOut;
       log(`Conexion cerrada. Codigo: ${code}. Reconectar: ${reconnect}`);
       if (reconnect) {
+        reconnectAttempts++;
+        if (reconnectAttempts > MAX_RECONNECT) {
+          status = 'error';
+          io.emit('status', 'Demasiados reintentos. Elimina auth_info/ y reinicia.');
+          log('Maximos reintentos alcanzados');
+          return;
+        }
         status = 'reconnecting';
-        io.emit('status', 'Reconectando...');
-        setTimeout(() => startBot(), 5000);
+        io.emit('status', `Reconectando... (${reconnectAttempts}/${MAX_RECONNECT})`);
+        const delay = Math.min(5000 * Math.pow(1.5, reconnectAttempts - 1), 60000);
+        log(`Reconexion en ${Math.round(delay / 1000)}s...`);
+        setTimeout(() => startBot(), delay);
       } else {
         status = 'logged_out';
         io.emit('status', 'Sesion cerrada. Elimina auth_info/ y reinicia.');
@@ -365,6 +407,7 @@ async function startBot() {
     }
 
     if (connection === 'open') {
+      reconnectAttempts = 0;
       status = 'ready';
       qrCodeDataURL = null;
       io.emit('status', 'WhatsApp conectado');
