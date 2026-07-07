@@ -8,23 +8,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const axios = require('axios');
-
-// Guard contra instancias multiples
-const LOCK_FILE = path.join(__dirname, '.server.lock');
-if (fs.existsSync(LOCK_FILE)) {
-  const lockPid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
-  try {
-    process.kill(lockPid, 0);
-    console.log(`Otra instancia activa (PID ${lockPid}). Cerrando esta.`);
-    process.exit(0);
-  } catch (e) {
-    // PID no existe, lock stale
-  }
-}
-fs.writeFileSync(LOCK_FILE, String(process.pid));
-process.on('exit', () => { try { fs.unlinkSync(LOCK_FILE); } catch (e) {} });
-process.on('SIGINT', () => process.exit());
-process.on('SIGTERM', () => process.exit());
+const net = require('net');
 
 const app = express();
 const server = http.createServer(app);
@@ -514,14 +498,34 @@ async function startBot() {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  log(`Servidor en puerto ${PORT}`);
-  log('Iniciando WhatsApp...');
-  startBot().catch(err => {
-    log('ERROR FATAL: ' + err.message);
-    process.exit(1);
+
+function isPortInUse(port) {
+  return new Promise((resolve) => {
+    const tester = net.createServer()
+      .once('error', () => resolve(true))
+      .once('listening', () => { tester.close(); resolve(false); })
+      .listen(port, '0.0.0.0');
   });
-});
+}
+
+async function main() {
+  const inUse = await isPortInUse(PORT);
+  if (inUse) {
+    log(`Puerto ${PORT} ya en uso - otra instancia activa. Cerrando.`);
+    process.exit(0);
+  }
+
+  server.listen(PORT, '0.0.0.0', () => {
+    log(`Servidor en puerto ${PORT}`);
+    log('Iniciando WhatsApp...');
+    startBot().catch(err => {
+      log('ERROR FATAL: ' + err.message);
+      process.exit(1);
+    });
+  });
+}
+
+main();
 
 process.on('unhandledRejection', (r) => log('UNHANDLED: ' + r));
 process.on('uncaughtException', (e) => { log('EXCEPTION: ' + e.message); log(e.stack); });
