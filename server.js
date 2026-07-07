@@ -86,6 +86,41 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function getAutoReply(message) {
+  const lower = message.toLowerCase().trim();
+  if (/^(hola|buenos dias|buenas tardes|buenas noches|hey|que tal|saludos|hello|hi)$/i.test(lower))
+    return 'Hola! Bienvenido a Agencia Nexus. Como puedo ayudarte hoy?';
+  if (/^(adios|hasta luego|chao|nos vemos|bye|gracias|muchas gracias)$/i.test(lower))
+    return 'Gracias por escribirnos! Estamos aqui cuando nos necesites.';
+  if (/(precio|precios|plan|planes|cuesta|costo|cuanto)/i.test(lower))
+    return 'Tenemos diferentes planes:\n\nEssential: $290K COP\nStart: $490K COP (popular)\nPRO: $890K COP (mas vendido)\nEnterprise: $1.590K COP\n\nCual te interesa?';
+  if (/(servicio|servicios|hacen|que hacen|que ofrecen)/i.test(lower))
+    return 'Ofrecemos:\n- Paginas web profesional\n- Tiendas online\n- Integracion WhatsApp\n- SEO y marketing digital\n- Soporte 24/7\n\nQue necesitas para tu negocio?';
+  if (/(pagina|web|sitio|landing|desarrollo)/i.test(lower))
+    return 'Desarrollamos paginas web profesionales, tiendas online y landing pages. Que tipo de negocio tienes?';
+  if (/(tienda|ecommerce|vender|productos)/i.test(lower))
+    return 'Creamos tiendas online con catalogo, carrito y pasarela de pago. El plan Start o PRO son ideales. Cuantos productos manejas?';
+  if (/(whatsapp|api|integracion)/i.test(lower))
+    return 'Integramos WhatsApp Business API para mensajes automaticos y ventas por chat. El plan PRO la incluye.';
+  if (/(hosting|servidor|dominio)/i.test(lower))
+    return 'Todos nuestros planes incluyen hosting premium, dominio .com y SSL por 12 meses.';
+  if (/(soporte|ayuda|problema)/i.test(lower))
+    return 'Nuestro soporte esta disponible 24/7 VIP. En que puedo ayudarte?';
+  if (/(demo|muestra|ejemplo|ver)/i.test(lower))
+    return 'Tenemos demos en n1nexus.com. Que tipo de negocio tienes? Te muestro uno similar!';
+  if (/(pago|pagar|factura|comprar)/i.test(lower))
+    return 'Aceptamos transferencia, PSE, tarjeta y Nequi. El pago es unico sin suscripciones.';
+  if (/(diseno|diseño|bonito|moderno|profesional)/i.test(lower))
+    return 'Nuestros diseños son modernos y responsivos. Quieres ver ejemplos de trabajos?';
+  if (/(marketing|publicidad|seo|redes)/i.test(lower))
+    return 'Ofrecemos SEO, redes sociales y campañas. El plan DIAMANTE incluye marketing completo.';
+  if (/(quien eres|que eres|tu nombre)/i.test(lower))
+    return 'Soy NEXUS, tu asistente virtual de Agencia Nexus. Estoy aqui para ayudarte!';
+  if (/(negocio|empresa|emprendimiento)/i.test(lower))
+    return 'Que bueno! Te puedo ayudar a llevar tu negocio al siguiente nivel con presencia digital. Que tipo es?';
+  return null;
+}
+
 function upsertContact(number, name, lastMessage, lastInteraction, incoming = false) {
   const num = normalizeNumber(number);
   const existing = contacts.find(c => normalizeNumber(c.number) === num);
@@ -530,68 +565,26 @@ async function startBot() {
       upsertContact(number, name, body, ts, true);
       emitContacts();
 
-      // Auto-respuesta Mistral AI
-      if (MISTRAL_API_KEY && contactEnabled(number)) {
-        try {
-          const userContext = detectUserContext(body);
-          let contextInstruction = '';
-          let maxTokens = 180;
-
-          // Check operator-injected context first
-          if (operatorContexts[number]) {
-            contextInstruction = `\n\n[CONTEXTO DEL OPERADOR: ${operatorContexts[number].message}. Usa esta informacion para guiar tu respuesta de manera personalizada.]`;
-            maxTokens = 250;
-            delete operatorContexts[number];
-          } else if (userContext === 'wisdom') {
-            contextInstruction = '\n\n[CONTEXTO: El usuario esta compartiendo algo personal o emocional. Responde con sabiduria, empatia y calidez. No menciones planes ni precios en este momento.]';
-            maxTokens = 250;
-          } else if (userContext === 'commercial') {
-            contextInstruction = '\n\n[CONTEXTO: El usuario esta preguntando por servicios comerciales. Responde con profesionalismo y orientacion a ventas.]';
-            maxTokens = 180;
-          } else if (userContext === 'mixed') {
-            contextInstruction = '\n\n[CONTEXTO: El usuario mezcla temas personales y comerciales. Primero responde lo personal, luego orienta lo comercial si es apropiado.]';
-            maxTokens = 220;
+      // Auto-respuesta por keywords
+      if (contactEnabled(number)) {
+        const autoReply = getAutoReply(body);
+        if (autoReply) {
+          try {
+            await sock.sendMessage(from, { text: autoReply });
+            const replyData = {
+              id: createMessageId(), type: 'ai-reply', from: 'Bot',
+              number, body: autoReply, timestamp: new Date().toISOString()
+            };
+            io.emit('new-message', replyData);
+            if (!conversations[number]) conversations[number] = [];
+            conversations[number].push(replyData);
+            saveConversations();
+            upsertContact(number, name, autoReply, replyData.timestamp, false);
+            emitContacts();
+            log(`Auto-respuesta a ${number}: ${autoReply}`);
+          } catch (err) {
+            log(`Error auto-respuesta: ${err.message}`);
           }
-
-          const response = await axios.post(MISTRAL_API_URL, {
-            model: 'mistral-tiny',
-            messages: [
-              { role: 'system', content: buildSystemPrompt() + contextInstruction },
-              { role: 'user', content: body }
-            ],
-            max_tokens: maxTokens
-          }, {
-            headers: {
-              'Authorization': `Bearer ${MISTRAL_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 30000
-          });
-
-          const reply = response.data.choices[0].message.content;
-          const replyData = {
-            id: createMessageId(), type: 'ai-reply', from: 'IA',
-            number, body: reply, timestamp: new Date().toISOString()
-          };
-
-          await sock.sendMessage(from, { text: reply });
-          io.emit('new-message', replyData);
-          if (!conversations[number]) conversations[number] = [];
-          conversations[number].push(replyData);
-          saveConversations();
-          upsertContact(number, name, reply, replyData.timestamp, false);
-          emitContacts();
-          log(`IA respondio a ${number} [${userContext}]: ${reply}`);
-        } catch (err) {
-          log(`Error IA: ${err.message}`);
-          const errorData = {
-            id: createMessageId(), type: 'error', from: 'IA',
-            number, body: `Error IA: ${err.message}`, timestamp: new Date().toISOString()
-          };
-          io.emit('new-message', errorData);
-          if (!conversations[number]) conversations[number] = [];
-          conversations[number].push(errorData);
-          saveConversations();
         }
       }
     }
