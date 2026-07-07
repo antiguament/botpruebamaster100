@@ -8,7 +8,6 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const axios = require('axios');
-const net = require('net');
 
 const app = express();
 const server = http.createServer(app);
@@ -392,13 +391,18 @@ Responde SOLO con el texto refinado, sin explicaciones.`;
 
 // ===== WHATSAPP BOT =====
 let reconnectAttempts = 0;
-const MAX_RECONNECT = 15;
-let reconnecting = false;
+const MAX_RECONNECT = 10;
+let botStarted = false;
+let lastReconnectTime = 0;
+const MIN_RECONNECT_INTERVAL = 10000;
 const operatorContexts = {};
 
 async function startBot() {
-  if (reconnecting) return;
-  reconnecting = true;
+  if (botStarted) {
+    log('Bot ya esta corriendo, ignorando startBot()');
+    return;
+  }
+  botStarted = true;
 
   const authDir = path.join(__dirname, 'auth_info');
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
@@ -420,13 +424,12 @@ async function startBot() {
     markOnlineOnConnect: true,
   });
 
-  reconnecting = false;
-
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
       reconnectAttempts = 0;
+      lastReconnectTime = 0;
       qrCodeDataURL = await qrcode.toDataURL(qr);
       status = 'qr';
       io.emit('qr-code', qrCodeDataURL);
@@ -438,28 +441,46 @@ async function startBot() {
       const code = lastDisconnect?.error?.output?.statusCode;
       const reconnect = code !== DisconnectReason.loggedOut;
       log(`Conexion cerrada. Codigo: ${code}. Reconectar: ${reconnect}`);
-      if (reconnect) {
-        reconnectAttempts++;
-        if (reconnectAttempts > MAX_RECONNECT) {
-          status = 'error';
-          io.emit('status', 'Demasiados reintentos. Elimina auth_info/ y reinicia.');
-          log('Maximos reintentos alcanzados');
-          return;
-        }
-        status = 'reconnecting';
-        io.emit('status', `Reconectando... (${reconnectAttempts}/${MAX_RECONNECT})`);
-        const delay = Math.min(5000 * Math.pow(1.5, reconnectAttempts - 1), 60000);
-        log(`Reconexion en ${Math.round(delay / 1000)}s...`);
-        setTimeout(() => startBot(), delay);
-      } else {
+
+      if (!reconnect) {
         status = 'logged_out';
         io.emit('status', 'Sesion cerrada. Elimina auth_info/ y reinicia.');
         log('Sesion cerrada');
+        botStarted = false;
+        return;
       }
+
+      // Cooldown: no reconectar mas rapido de 10 segundos
+      const now = Date.now();
+      const timeSinceLast = now - lastReconnectTime;
+      if (timeSinceLast < MIN_RECONNECT_INTERVAL) {
+        const wait = MIN_RECONNECT_INTERVAL - timeSinceLast;
+        log(`Cooldown: esperando ${Math.round(wait / 1000)}s antes de reconectar`);
+        await new Promise(r => setTimeout(r, wait));
+      }
+
+      reconnectAttempts++;
+      lastReconnectTime = Date.now();
+
+      if (reconnectAttempts > MAX_RECONNECT) {
+        status = 'error';
+        io.emit('status', 'Demasiados reintentos. Elimina auth_info/ y reinicia.');
+        log('Maximos reintentos alcanzados');
+        botStarted = false;
+        return;
+      }
+
+      status = 'reconnecting';
+      io.emit('status', `Reconectando... (${reconnectAttempts}/${MAX_RECONNECT})`);
+      const delay = Math.min(5000 * Math.pow(2, reconnectAttempts - 1), 60000);
+      log(`Reconexion #${reconnectAttempts} en ${Math.round(delay / 1000)}s...`);
+      botStarted = false;
+      setTimeout(() => startBot(), delay);
     }
 
     if (connection === 'open') {
       reconnectAttempts = 0;
+      lastReconnectTime = 0;
       status = 'ready';
       qrCodeDataURL = null;
       io.emit('status', 'WhatsApp conectado');
@@ -572,33 +593,24 @@ async function startBot() {
 
 const PORT = process.env.PORT || 3000;
 
-function isPortInUse(port) {
-  return new Promise((resolve) => {
-    const tester = net.createServer()
-      .once('error', () => resolve(true))
-      .once('listening', () => { tester.close(); resolve(false); })
-      .listen(port, '0.0.0.0');
-  });
-}
-
-async function main() {
-  const inUse = await isPortInUse(PORT);
-  if (inUse) {
-    log(`Puerto ${PORT} ya en uso - otra instancia activa. Cerrando.`);
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    log(`Puerto ${PORT} ya en uso - otra instancia activa. Cerrando esta instancia.`);
     process.exit(0);
+  } else {
+    log(`Error del servidor: ${err.message}`);
+    process.exit(1);
   }
+});
 
-  server.listen(PORT, '0.0.0.0', () => {
-    log(`Servidor en puerto ${PORT}`);
-    log('Iniciando WhatsApp...');
-    startBot().catch(err => {
-      log('ERROR FATAL: ' + err.message);
-      process.exit(1);
-    });
+server.listen(PORT, '0.0.0.0', () => {
+  log(`Servidor en puerto ${PORT}`);
+  log('Iniciando WhatsApp...');
+  startBot().catch(err => {
+    log('ERROR FATAL: ' + err.message);
+    process.exit(1);
   });
-}
-
-main();
+});
 
 process.on('unhandledRejection', (r) => log('UNHANDLED: ' + r));
 process.on('uncaughtException', (e) => { log('EXCEPTION: ' + e.message); log(e.stack); });
