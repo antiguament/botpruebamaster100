@@ -284,6 +284,7 @@ app.delete('/api/conversations/:number', (req, res) => {
 let qrCodeDataURL = null;
 let status = 'starting';
 let sock = null;
+const operatorContexts = {};
 
 // ===== SOCKET.IO =====
 io.on('connection', (socket) => {
@@ -345,6 +346,10 @@ io.on('connection', (socket) => {
     const draft = data.draft || '';
     if (!num || !draft) return socket.emit('send-result', { success: false, message: 'Faltan datos' });
 
+    if (!sock || status !== 'ready') {
+      return socket.emit('send-result', { success: false, message: 'Bot no conectado a WhatsApp' });
+    }
+
     try {
       const msgs = conversations[num] || [];
       const lastIncoming = [...msgs].reverse().find(m => m.type === 'incoming');
@@ -397,7 +402,6 @@ Responde SOLO con el texto refinado, sin explicaciones.`;
   socket.on('operator-inject-context', (data) => {
     const num = normalizeNumber(data.number);
     if (!num || !data.message) return;
-    if (!operatorContexts) globalThis.operatorContexts = {};
     operatorContexts[num] = {
       message: data.message,
       timestamp: new Date().toISOString(),
@@ -411,6 +415,10 @@ Responde SOLO con el texto refinado, sin explicaciones.`;
     const num = normalizeNumber(data.number);
     const message = data.message || '';
     if (!num || !message) return socket.emit('send-result', { success: false, message: 'Faltan datos' });
+
+    if (!sock || status !== 'ready') {
+      return socket.emit('send-result', { success: false, message: 'Bot no conectado a WhatsApp' });
+    }
 
     try {
       await sock.sendMessage(toChatId(num), { text: message });
@@ -436,16 +444,56 @@ const MAX_RECONNECT = 10;
 let botStarted = false;
 let lastReconnectTime = 0;
 const MIN_RECONNECT_INTERVAL = 10000;
-const operatorContexts = {};
+
+const LOCK_FILE = path.join(__dirname, '.bot.lock');
+const AUTH_DIR = path.join(__dirname, 'auth_info');
+
+function acquireLock() {
+  if (fs.existsSync(LOCK_FILE)) {
+    try {
+      const pid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
+      process.kill(pid, 0);
+      log(`Lock: proceso ${pid} activo. Esta instancia NO arrancara WhatsApp.`);
+      return false;
+    } catch {
+      log('Lock: proceso anterior muerto. Limpiando lock.');
+      try { fs.unlinkSync(LOCK_FILE); } catch {}
+    }
+  }
+  fs.writeFileSync(LOCK_FILE, String(process.pid));
+  log(`Lock: PID ${process.pid} registrado.`);
+  return true;
+}
+
+function releaseLock() {
+  try {
+    if (fs.existsSync(LOCK_FILE)) {
+      const pid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
+      if (pid === process.pid) fs.unlinkSync(LOCK_FILE);
+    }
+  } catch {}
+}
+
+process.on('exit', releaseLock);
+process.on('SIGINT', () => { releaseLock(); process.exit(0); });
+process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
 
 async function startBot() {
   if (botStarted) {
     log('Bot ya esta corriendo, ignorando startBot()');
     return;
   }
+
+  if (!acquireLock()) {
+    log('Otra instancia tiene el lock. WhatsApp NO se iniciara.');
+    status = 'error';
+    io.emit('status', 'Otra instancia activa. Espera a que libere el puerto.');
+    return;
+  }
+
   botStarted = true;
 
-  const authDir = path.join(__dirname, 'auth_info');
+  const authDir = AUTH_DIR;
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
   // Cerrar socket viejo si existe
@@ -480,18 +528,32 @@ async function startBot() {
 
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
-      const reconnect = code !== DisconnectReason.loggedOut;
-      log(`Conexion cerrada. Codigo: ${code}. Reconectar: ${reconnect}`);
+      log(`Conexion cerrada. Codigo: ${code}`);
 
-      if (!reconnect) {
-        status = 'logged_out';
-        io.emit('status', 'Sesion cerrada. Elimina auth_info/ y reinicia.');
-        log('Sesion cerrada');
+      // Code 440: otra instancia tomo el control. NO reconectar.
+      if (code === 440) {
+        log('Code 440: otra instancia tomo el control. No reconectar.');
+        status = 'error';
+        io.emit('status', 'Sesion reemplazada por otra instancia. Elimina auth_info/ y re-escanea QR.');
         botStarted = false;
+        releaseLock();
         return;
       }
 
-      // Cooldown: no reconectar mas rapido de 10 segundos
+      // Code 401/404: sesion cerrada permanentemente
+      if (code === DisconnectReason.loggedOut || code === 401 || code === 404) {
+        status = 'logged_out';
+        io.emit('status', 'Sesion cerrada. Elimina auth_info/ y reinicia.');
+        log('Sesion cerrada permanentemente');
+        botStarted = false;
+        releaseLock();
+        return;
+      }
+
+      // Cualquier otro codigo: reconectar con cooldown
+      const reconnect = true;
+      log(`Reconectando... Codigo: ${code}`);
+
       const now = Date.now();
       const timeSinceLast = now - lastReconnectTime;
       if (timeSinceLast < MIN_RECONNECT_INTERVAL) {
@@ -508,6 +570,7 @@ async function startBot() {
         io.emit('status', 'Demasiados reintentos. Elimina auth_info/ y reinicia.');
         log('Maximos reintentos alcanzados');
         botStarted = false;
+        releaseLock();
         return;
       }
 
