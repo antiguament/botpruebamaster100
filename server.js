@@ -6,6 +6,7 @@ const qrcode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { execSync } = require('child_process');
 const { install, detectBrowserPlatform, resolveBuildId, Browser } = require('@puppeteer/browsers');
 
 const app = express();
@@ -27,6 +28,9 @@ log(`Node: ${process.version}`);
 log(`Platform: ${process.platform}`);
 log(`CWD: ${process.cwd()}`);
 log(`Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+
+let qrCodeDataURL = null;
+let status = 'starting';
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -64,7 +68,7 @@ async function ensureChrome() {
     }
   }
 
-  log('Chrome no encontrado. Descargando automaticamente...');
+  log('Chrome no encontrado. Descargando chrome-headless-shell...');
   const cacheDir = process.env.PUPPETEER_CACHE_DIR || path.join(os.homedir(), '.cache', 'puppeteer');
   const platform = detectBrowserPlatform();
 
@@ -72,19 +76,43 @@ async function ensureChrome() {
     throw new Error('Plataforma no soportada para descarga de Chrome');
   }
 
-  const buildId = await resolveBuildId(Browser.CHROME, platform, 'latest');
-  log(`Descargando Chrome ${buildId}...`);
+  let result;
+  try {
+    const buildId = await resolveBuildId(Browser.CHROMEHEADLESSSHELL, platform, 'latest');
+    log(`Descargando chrome-headless-shell ${buildId}...`);
+    result = await install({
+      browser: Browser.CHROMEHEADLESSSHELL,
+      cacheDir,
+      platform,
+      buildId,
+    });
+  } catch (e1) {
+    log('headless-shell fallo, intentando chrome completo...');
+    try {
+      const buildId = await resolveBuildId(Browser.CHROME, platform, 'latest');
+      log(`Descargando Chrome ${buildId}...`);
+      result = await install({
+        browser: Browser.CHROME,
+        cacheDir,
+        platform,
+        buildId,
+      });
+    } catch (e2) {
+      throw new Error('No se pudo descargar ningun navegador: ' + e2.message);
+    }
+  }
 
-  const result = await install({
-    browser: Browser.CHROME,
-    cacheDir,
-    platform,
-    buildId,
-    installDeps: true,
-  });
+  const execPath = result.executablePath;
+  log(`Navegador descargado en: ${execPath}`);
 
-  log(`Chrome descargado en: ${result.executablePath}`);
-  return result.executablePath;
+  try {
+    fs.chmodSync(execPath, 0o755);
+    log('Permisos de ejecucion asignados');
+  } catch (e) {
+    log('No se pudieron asignar permisos: ' + e.message);
+  }
+
+  return execPath;
 }
 
 (async () => {
@@ -99,8 +127,17 @@ async function ensureChrome() {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
+        '--no-zygote',
+        '--single-process',
         '--disable-gpu',
-        '--disable-extensions'
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--no-default-browser-check',
       ],
       executablePath: chromePath
     };
@@ -109,9 +146,6 @@ async function ensureChrome() {
       authStrategy: new LocalAuth(),
       puppeteer: puppeteerConfig
     });
-
-    let qrCodeDataURL = null;
-    let status = 'starting';
 
     client.on('qr', async (qr) => {
       log('QR generado!');
