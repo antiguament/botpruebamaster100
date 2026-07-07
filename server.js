@@ -5,6 +5,8 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const { install, detectBrowserPlatform, resolveBuildId, Browser } = require('@puppeteer/browsers');
 
 const app = express();
 const server = http.createServer(app);
@@ -42,128 +44,152 @@ app.get('/status', (req, res) => {
   });
 });
 
-let chromiumPath = null;
+async function ensureChrome() {
+  const possiblePaths = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/opt/google/chrome/chrome',
+    '/snap/bin/chromium',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  ];
 
-const possiblePaths = [
-  process.env.PUPPETEER_EXECUTABLE_PATH,
-  '/usr/bin/chromium-browser',
-  '/usr/bin/chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-  '/opt/google/chrome/chrome',
-  '/snap/bin/chromium',
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-];
-
-for (const p of possiblePaths) {
-  if (p && fs.existsSync(p)) {
-    chromiumPath = p;
-    log(`Chrome encontrado: ${p}`);
-    break;
+  for (const p of possiblePaths) {
+    if (p && fs.existsSync(p)) {
+      log(`Chrome encontrado: ${p}`);
+      return p;
+    }
   }
-}
 
-if (!chromiumPath) {
-  log('No se encontro Chrome/Chromium en rutas conocidas');
-  log('Puppeteer intentara descargar su propio Chromium...');
-}
+  log('Chrome no encontrado. Descargando automaticamente...');
+  const cacheDir = process.env.PUPPETEER_CACHE_DIR || path.join(os.homedir(), '.cache', 'puppeteer');
+  const platform = detectBrowserPlatform();
 
-const puppeteerConfig = {
-  headless: true,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--disable-gpu',
-    '--disable-extensions'
-  ]
-};
-
-if (chromiumPath) {
-  puppeteerConfig.executablePath = chromiumPath;
-}
-
-const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: puppeteerConfig
-});
-
-let qrCodeDataURL = null;
-let status = 'starting';
-
-client.on('qr', async (qr) => {
-  log('QR generado!');
-  qrCodeDataURL = await qrcode.toDataURL(qr);
-  status = 'qr';
-  io.emit('qr', qrCodeDataURL);
-});
-
-client.on('ready', () => {
-  log('WhatsApp CONECTADO!');
-  status = 'ready';
-  io.emit('ready');
-});
-
-client.on('authenticated', () => {
-  log('Autenticado correctamente');
-  status = 'authenticated';
-  io.emit('authenticated');
-});
-
-client.on('auth_failure', (msg) => {
-  log('FALLO autenticacion: ' + msg);
-  status = 'auth_failure';
-  io.emit('auth_failure', msg);
-});
-
-client.on('disconnected', (reason) => {
-  log('Desconectado: ' + reason);
-  status = 'disconnected';
-  io.emit('disconnected', reason);
-});
-
-client.on('message', (msg) => {
-  log(`Mensaje: ${msg.from}: ${msg.body}`);
-  io.emit('message', { from: msg.from, body: msg.body, timestamp: msg.timestamp });
-});
-
-client.on('loading_screen', (percent, message) => {
-  log(`Cargando WhatsApp Web: ${percent}% - ${message}`);
-});
-
-client.on('browser_crash', (msg) => {
-  log('BROWSER CRASH: ' + msg);
-  status = 'crashed';
-});
-
-io.on('connection', (socket) => {
-  log('Cliente web conectado: ' + socket.id);
-  socket.emit('status', status);
-  
-  if (qrCodeDataURL && status === 'qr') {
-    socket.emit('qr', qrCodeDataURL);
+  if (!platform) {
+    throw new Error('Plataforma no soportada para descarga de Chrome');
   }
-  
-  socket.on('disconnect', () => {
-    log('Cliente web desconectado');
+
+  const buildId = await resolveBuildId(Browser.CHROME, platform, 'latest');
+  log(`Descargando Chrome ${buildId}...`);
+
+  const result = await install({
+    browser: Browser.CHROME,
+    cacheDir,
+    platform,
+    buildId,
+    installDeps: true,
   });
-});
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  log(`Servidor corriendo en puerto ${PORT}`);
-  log('Inicializando WhatsApp Web...');
-  
-  client.initialize().then(() => {
-    log('client.initialize() completado');
-  }).catch(err => {
-    log('ERROR en client.initialize(): ' + err.message);
+  log(`Chrome descargado en: ${result.executablePath}`);
+  return result.executablePath;
+}
+
+(async () => {
+  try {
+    const chromePath = await ensureChrome();
+
+    const puppeteerConfig = {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--disable-gpu',
+        '--disable-extensions'
+      ],
+      executablePath: chromePath
+    };
+
+    const client = new Client({
+      authStrategy: new LocalAuth(),
+      puppeteer: puppeteerConfig
+    });
+
+    let qrCodeDataURL = null;
+    let status = 'starting';
+
+    client.on('qr', async (qr) => {
+      log('QR generado!');
+      qrCodeDataURL = await qrcode.toDataURL(qr);
+      status = 'qr';
+      io.emit('qr', qrCodeDataURL);
+    });
+
+    client.on('ready', () => {
+      log('WhatsApp CONECTADO!');
+      status = 'ready';
+      io.emit('ready');
+    });
+
+    client.on('authenticated', () => {
+      log('Autenticado correctamente');
+      status = 'authenticated';
+      io.emit('authenticated');
+    });
+
+    client.on('auth_failure', (msg) => {
+      log('FALLO autenticacion: ' + msg);
+      status = 'auth_failure';
+      io.emit('auth_failure', msg);
+    });
+
+    client.on('disconnected', (reason) => {
+      log('Desconectado: ' + reason);
+      status = 'disconnected';
+      io.emit('disconnected', reason);
+    });
+
+    client.on('message', (msg) => {
+      log(`Mensaje: ${msg.from}: ${msg.body}`);
+      io.emit('message', { from: msg.from, body: msg.body, timestamp: msg.timestamp });
+    });
+
+    client.on('loading_screen', (percent, message) => {
+      log(`Cargando WhatsApp Web: ${percent}% - ${message}`);
+    });
+
+    client.on('browser_crash', (msg) => {
+      log('BROWSER CRASH: ' + msg);
+      status = 'crashed';
+    });
+
+    io.on('connection', (socket) => {
+      log('Cliente web conectado: ' + socket.id);
+      socket.emit('status', status);
+
+      if (qrCodeDataURL && status === 'qr') {
+        socket.emit('qr', qrCodeDataURL);
+      }
+
+      socket.on('disconnect', () => {
+        log('Cliente web desconectado');
+      });
+    });
+
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, '0.0.0.0', () => {
+      log(`Servidor corriendo en puerto ${PORT}`);
+      log('Inicializando WhatsApp Web...');
+
+      client.initialize().then(() => {
+        log('client.initialize() completado');
+      }).catch(err => {
+        log('ERROR en client.initialize(): ' + err.message);
+        log(err.stack);
+      });
+    });
+
+  } catch (err) {
+    log('ERROR FATAL: ' + err.message);
     log(err.stack);
-  });
-});
+    process.exit(1);
+  }
+})();
 
 process.on('unhandledRejection', (reason) => {
   log('UNHANDLED REJECTION: ' + reason);
