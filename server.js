@@ -300,6 +300,73 @@ io.on('connection', (socket) => {
     socket.emit('send-result', { success: true, message: `Chat ${num} eliminado` });
   });
 
+  // Operator: submit draft to refine with AI
+  socket.on('submit-operator-draft', async (data) => {
+    const num = normalizeNumber(data.number);
+    const draft = data.draft || '';
+    if (!num || !draft) return socket.emit('send-result', { success: false, message: 'Faltan datos' });
+
+    try {
+      const msgs = conversations[num] || [];
+      const lastIncoming = [...msgs].reverse().find(m => m.type === 'incoming');
+      const userMessage = lastIncoming ? lastIncoming.body : '(sin mensaje previo)';
+
+      const refinementPrompt = `El usuario pregunto: "${userMessage}"
+El operador escribio esta respuesta como guia: "${draft}"
+Refina y mejora la respuesta del operador. Manten su intencion pero:
+- Usa un tono profesional y cercano
+- Corrige errores ortograficos
+- Mejora la estructura
+- No inventes informacion que no este en el borrador
+Responde SOLO con el texto refinado, sin explicaciones.`;
+
+      const response = await axios.post(MISTRAL_API_URL, {
+        model: 'mistral-tiny',
+        messages: [
+          { role: 'system', content: 'Eres un asistente que refina respuestas para WhatsApp. Responde solo con el texto mejorado.' },
+          { role: 'user', content: refinementPrompt }
+        ],
+        max_tokens: 250
+      }, {
+        headers: {
+          'Authorization': `Bearer ${MISTRAL_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const refined = response.data.choices[0].message.content;
+      await sock.sendMessage(toChatId(num), { text: refined });
+
+      const ts = new Date().toISOString();
+      const msgData = { id: createMessageId(), type: 'operator-ai', from: 'Operador + IA', number: num, body: refined, timestamp: ts };
+      io.emit('new-message', msgData);
+      if (!conversations[num]) conversations[num] = [];
+      conversations[num].push(msgData);
+      saveConversations();
+      upsertContact(num, null, refined, ts, false);
+      emitContacts();
+      socket.emit('send-result', { success: true, message: `Respuesta refinada enviada a ${num}` });
+      log(`Draft refinado enviado a ${num}`);
+    } catch (err) {
+      log(`Error draft: ${err.message}`);
+      socket.emit('send-result', { success: false, message: `Error: ${err.message}` });
+    }
+  });
+
+  // Operator: inject context for next AI response
+  socket.on('operator-inject-context', (data) => {
+    const num = normalizeNumber(data.number);
+    if (!num || !data.message) return;
+    if (!operatorContexts) globalThis.operatorContexts = {};
+    operatorContexts[num] = {
+      message: data.message,
+      timestamp: new Date().toISOString(),
+      operator: data.operator || 'Operador'
+    };
+    socket.emit('send-result', { success: true, message: `Contexto inyectado para ${num}` });
+    log(`Contexto inyectado para ${num}: ${data.message}`);
+  });
+
   socket.on('send-message', async (data) => {
     const num = normalizeNumber(data.number);
     const message = data.message || '';
@@ -327,6 +394,7 @@ io.on('connection', (socket) => {
 let reconnectAttempts = 0;
 const MAX_RECONNECT = 15;
 let reconnecting = false;
+const operatorContexts = {};
 
 async function startBot() {
   if (reconnecting) return;
@@ -442,7 +510,12 @@ async function startBot() {
           let contextInstruction = '';
           let maxTokens = 180;
 
-          if (userContext === 'wisdom') {
+          // Check operator-injected context first
+          if (operatorContexts[number]) {
+            contextInstruction = `\n\n[CONTEXTO DEL OPERADOR: ${operatorContexts[number].message}. Usa esta informacion para guiar tu respuesta de manera personalizada.]`;
+            maxTokens = 250;
+            delete operatorContexts[number];
+          } else if (userContext === 'wisdom') {
             contextInstruction = '\n\n[CONTEXTO: El usuario esta compartiendo algo personal o emocional. Responde con sabiduria, empatia y calidez. No menciones planes ni precios en este momento.]';
             maxTokens = 250;
           } else if (userContext === 'commercial') {
