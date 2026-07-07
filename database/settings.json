@@ -1,0 +1,27 @@
+{
+  "business": {
+    "name": "N1 NEXUS VIP",
+    "phone": "+57 300 000 0000",
+    "email": "info@n1nexus.com"
+  },
+  "bot": {
+    "enabled": true,
+    "model": "mistral-tiny",
+    "maxTokens": 250,
+    "language": "es"
+  },
+  "ui": {
+    "theme": "dark",
+    "accentColor": "#00d4ff",
+    "contactsPerRow": 3
+  },
+  "predefinedTexts": {
+    "autoSave": true,
+    "maxTexts": 50
+  },
+  "calls": {
+    "enabled": true,
+    "voiceMessage": "Gracias por contactarnos. En este momento nuestro sistema no recibe llamadas telefónicas. Pronto un operador se pondrá en contacto contigo. ¡Gracias!",
+    "videoMessage": "Gracias por contactarnos. En este momento nuestro sistema no recibe videollamadas. Pronto un operador se pondrá en contacto contigo. ¡Gracias!"
+  }
+}

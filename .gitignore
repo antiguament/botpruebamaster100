@@ -1,5 +1,8 @@
 node_modules/
+auth_info/
+.env
+package-lock.json
 .wwebjs_auth/
 .wwebjs_cache/
-package-lock.json
-auth_info/
+*.log
+.wpp-node-simple/

@@ -1,212 +1,295 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot WhatsApp - Test Hostinger</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Segoe UI', Arial, sans-serif; 
-      background: linear-gradient(135deg, #0B121A 0%, #1A1A2E 50%, #16213E 100%); 
-      color: white; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      min-height: 100vh; 
-      padding: 20px;
-    }
-    .container { 
-      text-align: center; 
-      padding: 40px; 
-      background: rgba(255,255,255,0.05); 
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      max-width: 500px;
-      width: 100%;
-    }
-    h1 { 
-      font-size: 1.8em; 
-      margin-bottom: 20px;
-      background: linear-gradient(90deg, #00D4AA, #7C3AED);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    #qr { 
-      max-width: 280px; 
-      margin: 20px auto; 
-      border-radius: 10px;
-      background: white;
-      padding: 10px;
-    }
-    .status { 
-      padding: 12px 24px; 
-      border-radius: 10px; 
-      margin: 15px 0;
-      font-weight: bold;
-      transition: all 0.3s;
-    }
-    .waiting { 
-      background: rgba(243, 156, 18, 0.2); 
-      border: 1px solid #f39c12;
-      color: #f39c12;
-    }
-    .connected { 
-      background: rgba(39, 174, 96, 0.2); 
-      border: 1px solid #27ae60;
-      color: #27ae60;
-    }
-    .error { 
-      background: rgba(231, 76, 60, 0.2); 
-      border: 1px solid #e74c3c;
-      color: #e74c3c;
-    }
-    .loading {
-      background: rgba(52, 152, 219, 0.2);
-      border: 1px solid #3498db;
-      color: #3498db;
-    }
-    #messages {
-      margin-top: 20px;
-      text-align: left;
-      max-height: 200px;
-      overflow-y: auto;
-      padding: 10px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 10px;
-      display: none;
-    }
-    #messages.show { display: block; }
-    .msg {
-      padding: 8px 12px;
-      margin: 5px 0;
-      background: rgba(255,255,255,0.05);
-      border-radius: 8px;
-      font-size: 0.9em;
-      word-break: break-all;
-    }
-    .msg .from { color: #00D4AA; font-weight: bold; }
-    .diagnostics {
-      margin-top: 20px;
-      text-align: left;
-      padding: 15px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 10px;
-      font-family: monospace;
-      font-size: 0.8em;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    .diagnostics h3 {
-      color: #00D4AA;
-      margin-bottom: 10px;
-    }
-    .log-line {
-      padding: 3px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      color: rgba(255,255,255,0.7);
-    }
-    .log-line.error { color: #e74c3c; }
-    .info {
-      margin-top: 20px;
-      font-size: 0.85em;
-      color: rgba(255,255,255,0.5);
-    }
-    #server-info {
-      margin-top: 15px;
-      padding: 10px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 8px;
-      font-size: 0.85em;
-      text-align: left;
-    }
-    #server-info div { margin: 5px 0; }
-    #server-info span { color: #00D4AA; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bot WhatsApp Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #0a0e14; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .dashboard { width: 1440px; max-width: 100%; height: 92vh; max-height: 860px; background: #111a26; border-radius: 28px; box-shadow: 0 30px 70px rgba(0,0,0,0.7); display: grid; grid-template-columns: 320px 1fr 300px; grid-template-rows: 50px 1fr; overflow: hidden; }
+        .topbar { grid-column: 1 / -1; background: rgba(17,26,38,0.95); border-bottom: 1px solid rgba(0,212,255,0.08); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+        .topbar h1 { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #00d4ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .status-badge { display: flex; align-items: center; gap: 8px; padding: 4px 14px; border-radius: 60px; border: 1px solid rgba(0,255,136,0.08); font-size: 12px; color: #7a8a9e; }
+        .status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+        .status-badge.connected .dot { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+        .status-badge.connected { border-color: rgba(0,255,136,0.2); color: #00ff88; }
+
+        .sidebar { background: #0d1420; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; }
+        .sidebar-header { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { font-size: 13px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 1px; }
+        .contact-item { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: background 0.2s; display: flex; gap: 12px; align-items: center; }
+        .contact-item:hover { background: rgba(0,212,255,0.05); }
+        .contact-item.active { background: rgba(0,212,255,0.1); border-left: 3px solid #00d4ff; }
+        .contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #00d4ff, #00ff88); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0a0e14; font-size: 14px; flex-shrink: 0; }
+        .contact-info { flex: 1; min-width: 0; }
+        .contact-name { font-size: 13px; font-weight: 600; color: #e0e6ed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .contact-msg { font-size: 11px; color: #5a6a7e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .contact-time { font-size: 10px; color: #4a5a6e; flex-shrink: 0; }
+        .unread-badge { background: #00d4ff; color: #0a0e14; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; flex-shrink: 0; }
+
+        .chat-area { display: flex; flex-direction: column; background: #0f1923; }
+        .chat-header { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header-info h3 { font-size: 14px; color: #e0e6ed; }
+        .chat-header-info span { font-size: 11px; color: #5a6a7e; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .chat-input { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px; }
+        .chat-input input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 16px; color: #e0e6ed; font-size: 13px; outline: none; }
+        .chat-input input:focus { border-color: rgba(0,212,255,0.3); }
+        .chat-input button { background: linear-gradient(135deg, #00d4ff, #00ff88); border: none; border-radius: 12px; padding: 10px 20px; color: #0a0e14; font-weight: 700; cursor: pointer; font-size: 13px; }
+        .chat-input button:hover { opacity: 0.9; }
+
+        .msg { max-width: 70%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
+        .msg.incoming { background: rgba(255,255,255,0.06); color: #e0e6ed; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.manual { background: rgba(0,212,255,0.15); color: #e0e6ed; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg .msg-sender { font-size: 10px; color: #00d4ff; font-weight: 600; margin-bottom: 4px; }
+        .msg .msg-time { font-size: 9px; color: #4a5a6e; margin-top: 4px; text-align: right; }
+
+        .panel-right { background: #0d1420; border-left: 1px solid rgba(255,255,255,0.05); padding: 16px; overflow-y: auto; }
+        .panel-right h3 { font-size: 12px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .stat-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-card .label { font-size: 11px; color: #5a6a7e; }
+        .stat-card .value { font-size: 20px; font-weight: 700; color: #00d4ff; margin-top: 4px; }
+
+        .qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; }
+        .qr-container img { max-width: 280px; border-radius: 12px; background: white; padding: 16px; }
+        .qr-container p { color: #7a8a9e; font-size: 14px; }
+
+        .logs-container { margin-top: 16px; }
+        .logs-container h3 { margin-bottom: 8px; }
+        .log-line { font-size: 10px; color: #4a5a6e; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-family: monospace; word-break: break-all; }
+        .log-line.error { color: #e74c3c; }
+
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #4a5a6e; gap: 12px; }
+        .empty-state i { font-size: 48px; color: #2a3a4e; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🤖 Bot WhatsApp Test</h1>
-    <div id="status" class="status loading">Conectando al servidor...</div>
-    <img id="qr" src="" alt="QR Code" style="display:none;">
-    <div id="server-info"></div>
-    <div id="messages"></div>
-    <div class="diagnostics" id="logs" style="display:none;">
-      <h3>📋 Logs del servidor</h3>
-      <div id="log-content"></div>
-    </div>
-    <div class="info">Hostinger Node.js Test</div>
-    <button onclick="fetch('/status').then(r=>r.json()).then(d=>{document.getElementById('logs').style.display='block';document.getElementById('log-content').innerHTML=d.logs.map(l=>'<div class=log-line>'+l+'</div>').join('');document.getElementById('server-info').innerHTML='<div>Node: <span>'+d.node+'</span></div><div>Platform: <span>'+d.platform+'</span></div><div>Memory: <span>'+d.memory+'</span></div><div>Uptime: <span>'+Math.round(d.uptime)+'s</span></div><div>WhatsApp: <span>'+d.whatsappStatus+'</span></div>';})" style="margin-top:15px;padding:10px 20px;background:rgba(0,212,170,0.2);border:1px solid #00D4AA;color:#00D4AA;border-radius:8px;cursor:pointer;font-size:0.9em;">🔍 Diagnosticar</button>
-  </div>
+    <div class="dashboard">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <h1><i class="fab fa-whatsapp"></i> Bot WhatsApp Panel</h1>
+            </div>
+            <div class="status-badge" id="statusBadge">
+                <div class="dot"></div>
+                <span id="statusText">Conectando...</span>
+            </div>
+        </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const qrImg = document.getElementById('qr');
-    const statusDiv = document.getElementById('status');
-    const messagesDiv = document.getElementById('messages');
-    
-    function setStatus(text, type) {
-      statusDiv.textContent = text;
-      statusDiv.className = 'status ' + type;
-    }
-    
-    socket.on('connect', () => {
-      console.log('Conectado al servidor');
-      setStatus('Conectado al servidor, esperando WhatsApp...', 'loading');
-    });
-    
-    socket.on('connect_error', (err) => {
-      console.error('Error de conexion:', err);
-      setStatus('Error de conexion: ' + err.message, 'error');
-    });
-    
-    socket.on('status', (s) => {
-      console.log('Status:', s);
-      if (s === 'ready') {
-        setStatus('WhatsApp Conectado!', 'connected');
-        qrImg.style.display = 'none';
-        messagesDiv.classList.add('show');
-      } else if (s === 'qr') {
-        setStatus('Escanea el QR con WhatsApp', 'waiting');
-      } else if (s === 'starting') {
-        setStatus('Iniciando WhatsApp...', 'loading');
-      }
-    });
-    
-    socket.on('qr', (qr) => {
-      qrImg.src = qr;
-      qrImg.style.display = 'block';
-      setStatus('Escanea el QR con WhatsApp', 'waiting');
-    });
-    
-    socket.on('ready', () => {
-      qrImg.style.display = 'none';
-      setStatus('WhatsApp Conectado!', 'connected');
-      messagesDiv.classList.add('show');
-    });
-    
-    socket.on('authenticated', () => {
-      setStatus('Autenticado! Conectando...', 'connected');
-    });
-    
-    socket.on('auth_failure', (msg) => {
-      setStatus('Error de autenticacion: ' + msg, 'error');
-    });
-    
-    socket.on('disconnected', (reason) => {
-      setStatus('Desconectado: ' + reason, 'error');
-    });
-    
-    socket.on('message', (msg) => {
-      messagesDiv.classList.add('show');
-      const div = document.createElement('div');
-      div.className = 'msg';
-      div.innerHTML = '<span class="from">' + msg.from + '</span>: ' + msg.body;
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-  </script>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-users"></i> Contactos</h2>
+                <span id="contactCount" style="font-size:12px;color:#5a6a7e;">0</span>
+            </div>
+            <div id="contactList"></div>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+            <div class="qr-container" id="qrContainer" style="display:none;">
+                <i class="fab fa-whatsapp" style="font-size:48px;color:#25D366;"></i>
+                <img id="qrImage" src="" alt="QR Code" />
+                <p>Escanea el codigo QR con WhatsApp</p>
+            </div>
+            <div class="empty-state" id="emptyState">
+                <i class="fab fa-whatsapp"></i>
+                <p>Selecciona un contacto o espera conexion</p>
+            </div>
+            <div id="chatView" style="display:none;flex-direction:column;height:100%;">
+                <div class="chat-header">
+                    <div class="chat-header-info">
+                        <h3 id="chatName">-</h3>
+                        <span id="chatNumber">-</span>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="Escribe un mensaje..." />
+                    <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Enviar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-right">
+            <h3><i class="fas fa-chart-bar"></i> Panel</h3>
+            <div class="stat-card">
+                <div class="label">Contactos</div>
+                <div class="value" id="statContacts">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Mensajes</div>
+                <div class="value" id="statMessages">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Estado</div>
+                <div class="value" id="statStatus" style="font-size:14px;">-</div>
+            </div>
+            <div class="logs-container">
+                <h3><i class="fas fa-terminal"></i> Logs</h3>
+                <div id="logsContent" style="max-height:300px;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let contacts = [];
+        let conversations = {};
+        let selectedNumber = null;
+
+        function timeAgo(ts) {
+            if (!ts) return '';
+            const diff = Date.now() - new Date(ts).getTime();
+            const min = Math.floor(diff / 60000);
+            if (min < 1) return 'ahora';
+            if (min < 60) return min + 'm';
+            const hr = Math.floor(min / 60);
+            if (hr < 24) return hr + 'h';
+            return Math.floor(hr / 24) + 'd';
+        }
+
+        function renderContacts() {
+            const list = document.getElementById('contactList');
+            list.innerHTML = contacts.map(c => {
+                const initials = (c.name || c.number || '?').slice(0, 2).toUpperCase();
+                const active = c.number === selectedNumber ? ' active' : '';
+                const unread = c.unreadCount > 0 ? `<div class="unread-badge">${c.unreadCount}</div>` : '';
+                return `<div class="contact-item${active}" onclick="selectContact('${c.number}')">
+                    <div class="contact-avatar">${initials}</div>
+                    <div class="contact-info">
+                        <div class="contact-name">${c.name || c.number}</div>
+                        <div class="contact-msg">${(c.lastMessage || '').replace(/\n/g, ' ')}</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                        <div class="contact-time">${timeAgo(c.lastInteraction)}</div>
+                        ${unread}
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('contactCount').textContent = contacts.length;
+            document.getElementById('statContacts').textContent = contacts.length;
+        }
+
+        function selectContact(number) {
+            selectedNumber = number;
+            const contact = contacts.find(c => c.number === number);
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('qrContainer').style.display = 'none';
+            document.getElementById('chatView').style.display = 'flex';
+            document.getElementById('chatName').textContent = contact ? contact.name : number;
+            document.getElementById('chatNumber').textContent = number;
+            renderMessages();
+            renderContacts();
+        }
+
+        function renderMessages() {
+            if (!selectedNumber) return;
+            const msgs = conversations[selectedNumber] || [];
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = msgs.map(m => {
+                const cls = m.type === 'incoming' ? 'incoming' : 'manual';
+                const time = new Date(m.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                return `<div class="msg ${cls}">
+                    <div class="msg-sender">${m.from}</div>
+                    <div>${escapeHtml(m.body)}</div>
+                    <div class="msg-time">${time}</div>
+                </div>`;
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+            document.getElementById('statMessages').textContent = msgs.length;
+        }
+
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t || '';
+            return d.innerHTML;
+        }
+
+        function sendMessage() {
+            if (!selectedNumber) return;
+            const input = document.getElementById('messageInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            socket.emit('send-message', { number: selectedNumber, message: msg });
+            input.value = '';
+        }
+
+        document.getElementById('messageInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Socket.IO events
+        socket.on('connect', () => {
+            console.log('Conectado al servidor');
+        });
+
+        socket.on('status', (s) => {
+            const badge = document.getElementById('statusBadge');
+            const text = document.getElementById('statusText');
+            document.getElementById('statStatus').textContent = s;
+            if (s === 'ready' || s === 'WhatsApp conectado') {
+                badge.className = 'status-badge connected';
+                text.textContent = 'WhatsApp Conectado';
+                document.getElementById('qrContainer').style.display = 'none';
+                if (!selectedNumber) document.getElementById('emptyState').style.display = 'flex';
+            } else if (s === 'qr' || s.includes('QR') || s.includes('Escanea')) {
+                badge.className = 'status-badge';
+                text.textContent = 'Esperando QR';
+                document.getElementById('qrContainer').style.display = 'flex';
+                document.getElementById('emptyState').style.display = 'none';
+            } else if (s === 'reconnecting' || s.includes('Reconectando')) {
+                badge.className = 'status-badge';
+                text.textContent = 'Reconectando...';
+            } else {
+                badge.className = 'status-badge';
+                text.textContent = s || 'Iniciando...';
+            }
+        });
+
+        socket.on('qr-code', (url) => {
+            if (url) {
+                document.getElementById('qrImage').src = url;
+                document.getElementById('qrContainer').style.display = 'flex';
+                document.getElementById('emptyState').style.display = 'none';
+            } else {
+                document.getElementById('qrContainer').style.display = 'none';
+            }
+        });
+
+        socket.on('contacts', (data) => {
+            contacts = data;
+            renderContacts();
+        });
+
+        socket.on('conversations', (data) => {
+            conversations = data;
+            if (selectedNumber) renderMessages();
+        });
+
+        socket.on('new-message', (msg) => {
+            if (!conversations[msg.number]) conversations[msg.number] = [];
+            conversations[msg.number].push(msg);
+            if (msg.number === selectedNumber) renderMessages();
+            // update contact last message
+            const c = contacts.find(x => x.number === msg.number);
+            if (c) {
+                c.lastMessage = msg.body;
+                c.lastInteraction = msg.timestamp;
+                if (msg.type === 'incoming' && msg.number !== selectedNumber) {
+                    c.unreadCount = (c.unreadCount || 0) + 1;
+                }
+                renderContacts();
+            }
+        });
+
+        socket.on('send-result', (data) => {
+            console.log('Send result:', data);
+        });
+    </script>
 </body>
 </html>

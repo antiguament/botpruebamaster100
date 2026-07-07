@@ -1,0 +1,65 @@
+[
+  {
+    "id": "pt_001",
+    "emoji": "👋",
+    "text": "¡Hola! ¿Cómo estás hoy? ¿En qué puedo ayudarte?",
+    "tag": "Saludo",
+    "category": "general",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  },
+  {
+    "id": "pt_002",
+    "emoji": "😊",
+    "text": "¡Buenos días! 🌞 Que DIOS te bendiga con paz, salud y oportunidades. ¡Es un gusto acompañarte hoy con alegría y buen ánimo! ¿En qué puedo ayudarte? 😊",
+    "tag": "Saludos 2",
+    "category": "comida",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  },
+  {
+    "id": "pt_003",
+    "emoji": "🌻",
+    "text": "¡Buenos días! 🌞 Que este día sea para ti un regalo de paz, abundancia y oportunidades. Abre tu corazón con gratitud por todo lo que tienes y deja que la buena energía te acompañe en cada paso. ¡Que hoy sea especial! 💛 *(Si necesitas algo más, aquí estoy para acompañarte).*",
+    "tag": "saludo 3",
+    "category": "comida",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  },
+  {
+    "id": "pt_004",
+    "emoji": "🌿",
+    "text": "¡Qué frescura, amante de lo natural! Te encantarán nuestros productos.",
+    "tag": "Natural",
+    "category": "general",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  },
+  {
+    "id": "pt_005",
+    "emoji": "🎉",
+    "text": "¡Gracias por tu mensaje! Estamos aquí para servirte con excelencia.",
+    "tag": "Servicio",
+    "category": "general",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  },
+  {
+    "id": "pt_006",
+    "emoji": "✨",
+    "text": "Entre la oscuridad y la calma, siempre hay una luz que guía. ¿Cómo puedo ayudarte?",
+    "tag": "Inspiración",
+    "category": "sabiduría",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  },
+  {
+    "id": "pt_007",
+    "emoji": "🔥",
+    "text": "¡Qué hambre, food lover! 😊 ¿Qué antojo tienes hoy?",
+    "tag": "Antojo",
+    "category": "comida",
+    "createdAt": "2026-07-04T10:00:00.000Z",
+    "useCount": 0
+  }
+]
