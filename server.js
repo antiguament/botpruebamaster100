@@ -65,6 +65,18 @@ function saveSavedContacts() { saveJSON(SAVED_CONTACTS_PATH, savedContacts); }
 function savePredefinedTexts() { saveJSON(PREDEFINED_TEXTS_PATH, predefinedTexts); }
 function saveSettings() { saveJSON(SETTINGS_PATH, settings); }
 
+// ===== CONVERSATION HISTORY =====
+function addToHistory(number, role, body) {
+  if (!conversations[number]) conversations[number] = [];
+  conversations[number].push({ role, body, ts: new Date().toISOString() });
+  if (conversations[number].length > 50) conversations[number] = conversations[number].slice(-50);
+  saveConversations();
+}
+
+function getHistory(number, lastN = 5) {
+  return (conversations[number] || []).slice(-lastN);
+}
+
 // ===== HELPERS =====
 function normalizeNumber(value) {
   const raw = String(value || '').trim();
@@ -216,6 +228,41 @@ Mantén respuestas breves para WhatsApp, idealmente entre 1 y 4 líneas, salvo q
   const faq = k.preguntas_frecuentes ? JSON.stringify(k.preguntas_frecuentes) : '';
 
   return `${customPrompt}\n\n${rules}\n\nPlanes:\n${plans}\n\nPreguntas frecuentes:\n${faq}`;
+}
+
+async function getMistralReply(message, number) {
+  const history = getHistory(number, 6);
+  const messages = [
+    { role: 'system', content: buildSystemPrompt() }
+  ];
+
+  for (const h of history) {
+    messages.push({
+      role: h.role === 'user' ? 'user' : 'assistant',
+      content: h.body
+    });
+  }
+
+  messages.push({ role: 'user', content: message });
+
+  try {
+    const response = await axios.post(MISTRAL_API_URL, {
+      model: 'mistral-tiny',
+      messages,
+      max_tokens: 300
+    }, {
+      headers: {
+        'Authorization': `Bearer ${MISTRAL_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 25000
+    });
+
+    return response.data.choices[0].message.content.trim();
+  } catch (err) {
+    log(`Error Mistral AI: ${err.message}`);
+    return null;
+  }
 }
 
 // ===== ROUTES =====
@@ -603,7 +650,7 @@ async function startBot() {
 
     for (const msg of m.messages) {
       if (msg.key.fromMe) continue;
-      if (!msg.key.remoteJid || !msg.key.remoteJid.endsWith('@c.us')) continue;
+      if (!msg.key.remoteJid || (!msg.key.remoteJid.endsWith('@c.us') && !msg.key.remoteJid.endsWith('@lid'))) continue;
 
       const from = msg.key.remoteJid;
       const number = normalizeNumber(from);
@@ -629,26 +676,25 @@ async function startBot() {
       upsertContact(number, name, body, ts, true);
       emitContacts();
 
-      // Auto-respuesta por keywords
-      if (contactEnabled(number)) {
-        const autoReply = getAutoReply(body);
-        if (autoReply) {
-          try {
-            await sock.sendMessage(from, { text: autoReply });
-            const replyData = {
-              id: createMessageId(), type: 'ai-reply', from: 'Bot',
-              number, body: autoReply, timestamp: new Date().toISOString()
-            };
-            io.emit('new-message', replyData);
-            if (!conversations[number]) conversations[number] = [];
-            conversations[number].push(replyData);
-            saveConversations();
-            upsertContact(number, name, autoReply, replyData.timestamp, false);
-            emitContacts();
-            log(`Auto-respuesta a ${number}: ${autoReply}`);
-          } catch (err) {
-            log(`Error auto-respuesta: ${err.message}`);
-          }
+      // Guardar en historial
+      addToHistory(number, 'user', body);
+
+      // Intentar Mistral AI, si falla usar keywords
+      let autoReply = null;
+      if (MISTRAL_API_KEY) {
+        autoReply = await getMistralReply(body, number);
+      }
+      if (!autoReply) {
+        autoReply = getAutoReply(body);
+      }
+
+      if (autoReply) {
+        try {
+          await sock.sendMessage(from, { text: autoReply });
+          addToHistory(number, 'bot', autoReply);
+          log(`Respuesta a ${number}: ${autoReply.substring(0, 80)}...`);
+        } catch (err) {
+          log(`Error respuesta: ${err.message}`);
         }
       }
     }
