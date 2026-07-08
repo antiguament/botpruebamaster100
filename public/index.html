@@ -128,9 +128,17 @@
             <div style="display:flex;align-items:center;gap:12px;">
                 <h1><i class="fab fa-whatsapp"></i> Bot WhatsApp Panel</h1>
             </div>
-            <div class="status-badge" id="statusBadge">
-                <div class="dot"></div>
-                <span id="statusText">Conectando...</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <button onclick="disconnectWhatsApp()" title="Desconectar sesion" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px 12px;color:#ef4444;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-power-off"></i> Desconectar
+                </button>
+                <button onclick="restartBot()" title="Reiniciar bot" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:6px 12px;color:#fbbf24;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-rotate-right"></i> Reiniciar
+                </button>
+                <div class="status-badge" id="statusBadge">
+                    <div class="dot"></div>
+                    <span id="statusText">Conectando...</span>
+                </div>
             </div>
         </div>
 
@@ -150,6 +158,7 @@
                 <i class="fab fa-whatsapp" style="font-size:48px;color:#25D366;"></i>
                 <img id="qrImage" src="" alt="QR Code" />
                 <p>Escanea el codigo QR con WhatsApp</p>
+                <p id="qrCountdown" style="font-size:12px;color:#7a8a9e;margin-top:-8px;"></p>
             </div>
             <div class="empty-state" id="emptyState">
                 <i class="fab fa-whatsapp"></i>
@@ -439,6 +448,7 @@
                 badge.className = 'status-badge connected';
                 text.textContent = 'WhatsApp Conectado';
                 document.getElementById('qrContainer').style.display = 'none';
+                stopQrCountdown();
                 if (!selectedNumber) document.getElementById('emptyState').style.display = 'flex';
             } else if (s === 'qr' || s.includes('QR') || s.includes('Escanea')) {
                 badge.className = 'status-badge';
@@ -459,8 +469,10 @@
                 document.getElementById('qrImage').src = url;
                 document.getElementById('qrContainer').style.display = 'flex';
                 document.getElementById('emptyState').style.display = 'none';
+                startQrCountdown();
             } else {
                 document.getElementById('qrContainer').style.display = 'none';
+                stopQrCountdown();
             }
         });
 
@@ -511,6 +523,56 @@
             predefinedTexts = data;
             renderPredefinedTexts();
         }).catch(() => {});
+
+        // ===== DISCONNECT / RESTART =====
+        function disconnectWhatsApp() {
+            if (!confirm('Desconectar la sesion WhatsApp? Se borrara la sesion y tendras que escanear el QR de nuevo.')) return;
+            fetch('/api/disconnect', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    toast(data.message || 'Desconectando...', 'success');
+                })
+                .catch(err => toast('Error: ' + err.message, 'error'));
+        }
+
+        function restartBot() {
+            if (!confirm('Reiniciar el bot? Se desconectara y volvera a conectar automaticamente.')) return;
+            fetch('/api/restart', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    toast(data.message || 'Reiniciando...', 'success');
+                })
+                .catch(err => toast('Error: ' + err.message, 'error'));
+        }
+
+        // ===== QR COUNTDOWN =====
+        let qrCountdownInterval = null;
+        let qrExpiresAt = 0;
+
+        function startQrCountdown() {
+            stopQrCountdown();
+            qrExpiresAt = Date.now() + 120000; // 2 minutes
+            qrCountdownInterval = setInterval(() => {
+                const remaining = Math.max(0, Math.ceil((qrExpiresAt - Date.now()) / 1000));
+                const el = document.getElementById('qrCountdown');
+                if (el) {
+                    if (remaining > 0) {
+                        el.textContent = `QR expira en ${remaining}s`;
+                        el.style.color = remaining < 30 ? '#ef4444' : '#7a8a9e';
+                    } else {
+                        el.textContent = 'QR expirado, esperando nuevo...';
+                        el.style.color = '#fbbf24';
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopQrCountdown() {
+            if (qrCountdownInterval) {
+                clearInterval(qrCountdownInterval);
+                qrCountdownInterval = null;
+            }
+        }
     </script>
 </body>
 </html>

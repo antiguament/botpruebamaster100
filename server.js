@@ -327,6 +327,62 @@ app.delete('/api/conversations/:number', (req, res) => {
   res.json({ success: true });
 });
 
+// ===== DISCONNECT / RESTART =====
+app.post('/api/disconnect', async (req, res) => {
+  try {
+    log('Desconectando sesion WhatsApp...');
+    if (sock) {
+      try { await sock.logout(); } catch {}
+      try { sock.end(undefined); } catch {}
+      sock = null;
+    }
+    botStarted = false;
+    status = 'disconnected';
+    clearDeployMarker();
+    releaseLock();
+
+    // Limpiar auth_info
+    if (fs.existsSync(AUTH_DIR)) {
+      const files = fs.readdirSync(AUTH_DIR);
+      for (const f of files) {
+        try { fs.unlinkSync(path.join(AUTH_DIR, f)); } catch {}
+      }
+    }
+
+    io.emit('status', 'Sesion desconectada. Reiniciando...');
+    log('Sesion desconectada. Reiniciando en 3s...');
+
+    setTimeout(() => { startBot().catch(err => log('Error reiniciando: ' + err.message)); }, 3000);
+    res.json({ success: true, message: 'Sesion desconectada. QR se regenerara en unos segundos.' });
+  } catch (err) {
+    log('Error desconectando: ' + err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/restart', async (req, res) => {
+  try {
+    log('Reiniciando bot...');
+    if (sock) {
+      try { sock.end(undefined); } catch {}
+      sock = null;
+    }
+    botStarted = false;
+    status = 'restarting';
+    clearDeployMarker();
+    releaseLock();
+
+    io.emit('status', 'Reiniciando...');
+    log('Bot reiniciando en 2s...');
+
+    setTimeout(() => { startBot().catch(err => log('Error reiniciando: ' + err.message)); }, 2000);
+    res.json({ success: true, message: 'Bot reiniciando...' });
+  } catch (err) {
+    log('Error reiniciando: ' + err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ===== BOT STATE =====
 let qrCodeDataURL = null;
 let status = 'starting';
@@ -494,32 +550,84 @@ const MIN_RECONNECT_INTERVAL = 10000;
 
 const LOCK_FILE = path.join(__dirname, '.bot.lock');
 const AUTH_DIR = path.join(__dirname, 'auth_info');
+const DEPLOY_MARKER = path.join(__dirname, '.deploy.marker');
+const MY_START_TIME = Date.now();
 
 function acquireLock() {
   if (fs.existsSync(LOCK_FILE)) {
     try {
-      const pid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
+      const content = fs.readFileSync(LOCK_FILE, 'utf8').trim();
+      const parts = content.split('|');
+      const pid = parseInt(parts[0]);
+      const lockTime = parseInt(parts[1]) || 0;
+
       if (pid === process.pid) return true;
-      process.kill(pid, 0);
-      log(`Lock: proceso ${pid} activo. Esta instancia NO arrancara WhatsApp.`);
-      return false;
+
+      const heartbeat = Date.now() - lockTime;
+      if (heartbeat > 60000) {
+        log(`Lock: heartbeat viejo (${Math.round(heartbeat/1000)}s). Forzando takeover.`);
+        try { fs.unlinkSync(LOCK_FILE); } catch {}
+      } else {
+        try {
+          process.kill(pid, 0);
+          log(`Lock: proceso ${pid} activo (heartbeat ${Math.round(heartbeat/1000)}s). Esperando...`);
+          return false;
+        } catch {
+          log('Lock: proceso anterior muerto. Limpiando lock.');
+          try { fs.unlinkSync(LOCK_FILE); } catch {}
+        }
+      }
     } catch {
-      log('Lock: proceso anterior muerto. Limpiando lock.');
       try { fs.unlinkSync(LOCK_FILE); } catch {}
     }
   }
-  fs.writeFileSync(LOCK_FILE, String(process.pid));
+  fs.writeFileSync(LOCK_FILE, `${process.pid}|${Date.now()}`);
   log(`Lock: PID ${process.pid} registrado.`);
   return true;
+}
+
+function heartbeatLock() {
+  try {
+    if (fs.existsSync(LOCK_FILE)) {
+      const content = fs.readFileSync(LOCK_FILE, 'utf8').trim();
+      const pid = parseInt(content.split('|')[0]);
+      if (pid === process.pid) {
+        fs.writeFileSync(LOCK_FILE, `${process.pid}|${Date.now()}`);
+      }
+    }
+  } catch {}
 }
 
 function releaseLock() {
   try {
     if (fs.existsSync(LOCK_FILE)) {
-      const pid = parseInt(fs.readFileSync(LOCK_FILE, 'utf8').trim());
+      const content = fs.readFileSync(LOCK_FILE, 'utf8').trim();
+      const pid = parseInt(content.split('|')[0]);
       if (pid === process.pid) fs.unlinkSync(LOCK_FILE);
     }
   } catch {}
+}
+
+function writeDeployMarker() {
+  try { fs.writeFileSync(DEPLOY_MARKER, `${process.pid}|${Date.now()}`); } catch {}
+}
+
+function checkDeployMarker() {
+  try {
+    if (fs.existsSync(DEPLOY_MARKER)) {
+      const content = fs.readFileSync(DEPLOY_MARKER, 'utf8').trim();
+      const markerTime = parseInt(content.split('|')[1]) || 0;
+      if (markerTime > MY_START_TIME) {
+        log('Deploy marker detectado: nueva instancia activa. Apagando...');
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+function clearDeployMarker() {
+  try { fs.unlinkSync(DEPLOY_MARKER); } catch {}
 }
 
 process.on('exit', releaseLock);
@@ -538,6 +646,21 @@ async function startBot() {
     io.emit('status', 'Otra instancia activa. Espera a que libere el puerto.');
     return;
   }
+
+  writeDeployMarker();
+
+  // Heartbeat: actualizar lock cada 15s + check deploy marker
+  const heartbeatInterval = setInterval(() => {
+    heartbeatLock();
+    if (checkDeployMarker()) {
+      clearInterval(heartbeatInterval);
+      log('Nueva instancia detectada via deploy marker. Cerrando...');
+      if (sock) { try { sock.end(undefined); } catch {} }
+      releaseLock();
+      clearDeployMarker();
+      process.exit(0);
+    }
+  }, 15000);
 
   botStarted = true;
 
@@ -635,6 +758,7 @@ async function startBot() {
       lastReconnectTime = 0;
       status = 'ready';
       qrCodeDataURL = null;
+      clearDeployMarker();
       io.emit('status', 'WhatsApp conectado');
       io.emit('qr-code', '');
       io.emit('contacts', contacts);
