@@ -796,8 +796,21 @@
             background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.2) 100%);
             border-color: rgba(239, 68, 68, 0.5);
             color: #fca5a5;
-            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
-            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .composer .send-group .action-btn.paused {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: #fbbf24;
+            box-shadow: 0 2px 12px rgba(251, 191, 36, 0.15);
+        }
+
+        .composer .send-group .action-btn.paused:hover {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.25) 100%);
+            border-color: rgba(251, 191, 36, 0.6);
+            color: #fcd34d;
+            box-shadow: 0 4px 20px rgba(251, 191, 36, 0.25);
         }
 
         .composer .send-group #toggleReadBtn {
@@ -2432,6 +2445,7 @@
 
                 <h4 style="margin-top:22px; color:#ef4444;"><i class="fas fa-trash-alt"></i> Zona de peligro</h4>
                 <p style="font-size:11px; color:#7a8a9e; margin-bottom:10px;">Eliminará todas las conversaciones del historial. Los contactos se mantendrán.</p>
+                <input class="config-textarea" id="purgePassword" type="password" placeholder="Contraseña admin..." style="min-height:auto; margin-bottom:8px;" />
                 <button class="config-danger-btn" id="purgeConversationsBtn"><i class="fas fa-trash-alt"></i> Limpiar todas las conversaciones</button>
                 <div id="purgeSuccess" style="display: none;"></div>
             </div>
@@ -2639,6 +2653,8 @@
             toggleBotBtn.innerHTML = botPaused
                 ? '<i class="fas fa-play"></i>'
                 : '<i class="fas fa-pause"></i>';
+            toggleBotBtn.title = botPaused ? 'Reanudar IA (bot pausado)' : 'Pausar IA';
+            toggleBotBtn.classList.toggle('paused', botPaused);
 
             messagesBox.innerHTML = '';
 
@@ -3042,7 +3058,13 @@
             if (!selectedNumber) return;
             const contact = getContact(selectedNumber);
             const current = contact ? contact.botEnabled !== false : true;
-            socket.emit('set-bot-enabled', { number: selectedNumber, enabled: !current });
+            const newState = !current;
+            socket.emit('set-bot-enabled', { number: selectedNumber, enabled: newState });
+            toggleBotBtn.innerHTML = newState
+                ? '<i class="fas fa-pause"></i>'
+                : '<i class="fas fa-play"></i>';
+            toggleBotBtn.title = newState ? 'Pausar IA' : 'Reanudar IA (bot pausado)';
+            toggleBotBtn.classList.toggle('paused', !newState);
         });
 
         document.getElementById('toggleReadBtn').addEventListener('click', () => {
@@ -3543,6 +3565,11 @@
         });
 
         document.getElementById('purgeConversationsBtn').addEventListener('click', () => {
+            const password = document.getElementById('purgePassword').value;
+            if (password !== 'admin123') {
+                alert('Contraseña incorrecta');
+                return;
+            }
             if (!confirm('¿Eliminar TODAS las conversaciones? Esta acción no se puede deshacer.')) return;
             if (!confirm('¿Estás completamente seguro? Se borrarán todos los mensajes de todos los contactos.')) return;
             fetch('/api/purge-conversations', { method: 'POST' })
@@ -3551,6 +3578,7 @@
                     if (result.success) {
                         conversations = {};
                         renderConversation();
+                        document.getElementById('purgePassword').value = '';
                         const msg = document.getElementById('purgeSuccess');
                         msg.textContent = 'Conversaciones eliminadas';
                         msg.className = 'config-success';
