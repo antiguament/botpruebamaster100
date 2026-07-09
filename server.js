@@ -934,6 +934,16 @@ async function startBot() {
         try {
           await sock.sendMessage(from, { text: autoReply });
           addToHistory(number, 'bot', autoReply);
+          const aiMsgId = createMessageId();
+          const aiTs = new Date().toISOString();
+          const aiMsgData = { id: aiMsgId, type: 'ai-reply', from: 'IA', number, body: autoReply, timestamp: aiTs };
+          if (!conversations[number]) conversations[number] = [];
+          conversations[number].push(aiMsgData);
+          if (conversations[number].length > 300) conversations[number] = conversations[number].slice(-300);
+          saveConversations();
+          io.emit('new-message', aiMsgData);
+          upsertContact(number, null, autoReply, aiTs, false);
+          emitContacts();
           log(`Respuesta a ${number}: ${autoReply.substring(0, 80)}...`);
         } catch (err) {
           log(`Error respuesta: ${err.message}`);
