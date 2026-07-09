@@ -2090,6 +2090,26 @@
             transform: translateY(-1px);
         }
 
+        .config-backup-btn {
+            width: 100%;
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .config-backup-btn:hover {
+            background: rgba(0, 212, 255, 0.25);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
         .config-success {
             text-align: center;
             padding: 8px;
@@ -2405,6 +2425,10 @@
                 <input class="config-textarea" id="botMaxTokens" type="number" value="250" min="50" max="1000" style="min-height:auto;" />
                 <button class="config-save-btn" id="saveBotConfig" style="margin-top:10px;">Guardar bot</button>
                 <div id="botConfigSuccess" style="display: none;"></div>
+
+                <h4 style="margin-top:22px; color:#00d4ff;"><i class="fas fa-download"></i> Datos y Respaldo</h4>
+                <p style="font-size:11px; color:#7a8a9e; margin-bottom:10px;">Descarga un archivo JSON con todas las conversaciones, contactos y configuración.</p>
+                <button class="config-backup-btn" id="backupBtn"><i class="fas fa-download"></i> Descargar backup</button>
 
                 <h4 style="margin-top:22px; color:#ef4444;"><i class="fas fa-trash-alt"></i> Zona de peligro</h4>
                 <p style="font-size:11px; color:#7a8a9e; margin-bottom:10px;">Eliminará todas las conversaciones del historial. Los contactos se mantendrán.</p>
@@ -3533,6 +3557,26 @@
                         msg.style.display = 'block';
                         setTimeout(() => { msg.style.display = 'none'; }, 2500);
                     }
+                });
+        });
+
+        document.getElementById('backupBtn').addEventListener('click', () => {
+            fetch('/api/backup-conversations')
+                .then(res => {
+                    const disposition = res.headers.get('Content-Disposition');
+                    const match = disposition && disposition.match(/filename="?(.+?)"?$/);
+                    const filename = match ? match[1] : 'backup-nexus.json';
+                    return res.blob().then(blob => ({ blob, filename }));
+                })
+                .then(({ blob, filename }) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 });
         });
 

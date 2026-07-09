@@ -402,6 +402,25 @@ app.post('/api/purge-conversations', (req, res) => {
   res.json({ success: true, message: 'Conversaciones eliminadas' });
 });
 
+app.get('/api/backup-conversations', (req, res) => {
+  const now = new Date();
+  const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `backup-nexus-${ts}.json`;
+  const backup = {
+    backup_date: now.toISOString(),
+    app: 'N1 NEXUS VIP',
+    conversations: loadJSON(CONVERSATIONS_PATH, {}),
+    contacts: loadJSON(CONTACTS_PATH, []),
+    settings: loadJSON(SETTINGS_PATH, {}),
+    savedContacts: loadJSON(SAVED_CONTACTS_PATH, []),
+    predefinedTexts: loadJSON(PREDEFINED_TEXTS_PATH, [])
+  };
+  log(`Backup descargado: ${filename}`);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.json(backup);
+});
+
 // ===== DISCONNECT / RESTART =====
 app.post('/api/disconnect', async (req, res) => {
   try {
