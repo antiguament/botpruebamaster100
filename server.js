@@ -446,7 +446,7 @@ io.on('connection', (socket) => {
   // Operator: submit draft to refine with AI
   socket.on('submit-operator-draft', async (data) => {
     const num = normalizeNumber(data.number);
-    const draft = data.draft || '';
+    const draft = data.operatorDraft || data.draft || '';
     if (!num || !draft) return socket.emit('send-result', { success: false, message: 'Faltan datos' });
 
     if (!sock || status !== 'ready') {
@@ -539,6 +539,60 @@ Responde SOLO con el texto refinado, sin explicaciones.`;
       log(`Error enviando: ${err.message}`);
     }
   });
+
+  // Send media (image, audio, video, document)
+  socket.on('send-media', async (data) => {
+    if (!sock || status !== 'ready') {
+      return socket.emit('send-result', { success: false, message: 'Bot no conectado a WhatsApp' });
+    }
+    try {
+      const num = normalizeNumber(data.number);
+      if (!num || !data.base64) return socket.emit('send-result', { success: false, message: 'Faltan datos' });
+
+      const buffer = Buffer.from(data.base64, 'base64');
+      const mimetype = data.mimetype || 'application/octet-stream';
+      const filename = data.filename || 'archivo';
+
+      const msgPayload = {};
+      if (mimetype.startsWith('image/')) msgPayload.image = buffer;
+      else if (mimetype.startsWith('audio/')) msgPayload.audio = buffer;
+      else if (mimetype.startsWith('video/')) msgPayload.video = buffer;
+      else { msgPayload.document = buffer; msgPayload.fileName = filename; }
+      msgPayload.mimetype = mimetype;
+      if (mimetype.startsWith('audio/')) msgPayload.ptt = false;
+
+      await sock.sendMessage(toChatId(num), msgPayload);
+
+      const ts = new Date().toISOString();
+      const msgData = { id: createMessageId(), type: 'manual', from: 'Tu', number: num, body: `[${filename}]`, timestamp: ts };
+      io.emit('new-message', msgData);
+      if (!conversations[num]) conversations[num] = [];
+      conversations[num].push(msgData); saveConversations();
+      upsertContact(num, null, `[${filename}]`, ts, false);
+      emitContacts();
+      socket.emit('send-result', { success: true, message: `Archivo enviado a ${num}` });
+      log(`Archivo enviado a ${num}: ${filename}`);
+    } catch (err) {
+      socket.emit('send-result', { success: false, message: `Error enviando archivo: ${err.message}` });
+      log(`Error enviando archivo: ${err.message}`);
+    }
+  });
+
+  // Get rejected call log
+  socket.on('get-call-log', (callback) => {
+    try {
+      const logData = loadJSON(path.join(__dirname, 'database', 'call-log.json'), []);
+      callback(logData);
+    } catch { callback([]); }
+  });
+
+  // Clear rejected call log
+  socket.on('clear-call-log', (callback) => {
+    try {
+      saveJSON(path.join(__dirname, 'database', 'call-log.json'), []);
+      callback([]);
+    } catch { callback([]); }
+  });
 });
 
 // ===== WHATSAPP BOT =====
@@ -616,8 +670,11 @@ function checkDeployMarker() {
   try {
     if (fs.existsSync(DEPLOY_MARKER)) {
       const content = fs.readFileSync(DEPLOY_MARKER, 'utf8').trim();
-      const markerTime = parseInt(content.split('|')[1]) || 0;
-      if (markerTime > MY_START_TIME) {
+      const parts = content.split('|');
+      const markerPid = parseInt(parts[0]);
+      const markerTime = parseInt(parts[1]) || 0;
+      // Solo apagar si el marker es de OTRA instancia (PID diferente)
+      if (markerPid !== process.pid && markerTime > MY_START_TIME) {
         log('Deploy marker detectado: nueva instancia activa. Apagando...');
         return true;
       }

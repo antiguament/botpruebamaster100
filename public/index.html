@@ -3,645 +3,3454 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bot WhatsApp Panel</title>
+    <title>N1 NEXUS VIP · Panel WhatsApp</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-        body { background: #0a0e14; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .dashboard { width: 1440px; max-width: 100%; height: 92vh; max-height: 860px; background: #111a26; border-radius: 28px; box-shadow: 0 30px 70px rgba(0,0,0,0.7); display: grid; grid-template-columns: 320px 1fr 300px; grid-template-rows: 50px 1fr; overflow: hidden; }
-        .topbar { grid-column: 1 / -1; background: rgba(17,26,38,0.95); border-bottom: 1px solid rgba(0,212,255,0.08); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
-        .topbar h1 { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #00d4ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .status-badge { display: flex; align-items: center; gap: 8px; padding: 4px 14px; border-radius: 60px; border: 1px solid rgba(0,255,136,0.08); font-size: 12px; color: #7a8a9e; }
-        .status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
-        .status-badge.connected .dot { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
-        .status-badge.connected { border-color: rgba(0,255,136,0.2); color: #00ff88; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
 
-        .sidebar { background: #0d1420; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .sidebar-header h2 { font-size: 13px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 1px; }
-        .sidebar-search { padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
-        .sidebar-search input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 12px; color: #e0e6ed; font-size: 12px; outline: none; }
-        .sidebar-search input:focus { border-color: rgba(0,212,255,0.3); }
-        #contactList { flex: 1; overflow-y: auto; }
-        .contact-item { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: background 0.2s; display: flex; gap: 12px; align-items: center; }
-        .contact-item:hover { background: rgba(0,212,255,0.05); }
-        .contact-item.active { background: rgba(0,212,255,0.1); border-left: 3px solid #00d4ff; }
-        .contact-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0a0e14; font-size: 14px; flex-shrink: 0; }
-        .contact-info { flex: 1; min-width: 0; }
-        .contact-name { font-size: 13px; font-weight: 600; color: #e0e6ed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
-        .contact-name .badge { font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-        .badge-ai { background: rgba(0,212,255,0.2); color: #00d4ff; }
-        .badge-paused { background: rgba(251,191,36,0.2); color: #fbbf24; }
-        .contact-msg { font-size: 11px; color: #5a6a7e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-        .contact-time { font-size: 10px; color: #4a5a6e; flex-shrink: 0; }
-        .unread-badge { background: #00d4ff; color: #0a0e14; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; flex-shrink: 0; }
+        body {
+            background: #0a0e14;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-        .chat-area { display: flex; flex-direction: column; background: #0f1923; overflow: hidden; }
-        .chat-header { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .chat-header-info h3 { font-size: 14px; color: #e0e6ed; }
-        .chat-header-info span { font-size: 11px; color: #5a6a7e; }
-        .chat-header-actions { display: flex; gap: 6px; }
-        .chat-header-actions button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 6px 10px; color: #7a8a9e; cursor: pointer; font-size: 12px; transition: all 0.2s; }
-        .chat-header-actions button:hover { background: rgba(0,212,255,0.1); color: #00d4ff; border-color: rgba(0,212,255,0.3); }
-        .chat-header-actions button.active-toggle { background: rgba(251,191,36,0.15); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
-        .chat-header-actions button.danger:hover { background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+        .dashboard {
+            width: 1440px;
+            max-width: 100%;
+            height: 92vh;
+            max-height: 860px;
+            background: #111a26;
+            border-radius: 28px;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 212, 255, 0.06);
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            grid-template-rows: 36px 1fr 60px;
+            gap: 0;
+            overflow: hidden;
+            position: relative;
+        }
 
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+        .topbar {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background: rgba(17, 26, 38, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 16px;
+            z-index: 10;
+        }
 
-        .chat-input-area { border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
-        .chat-input { padding: 12px 16px; display: flex; gap: 8px; }
-        .chat-input input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 16px; color: #e0e6ed; font-size: 13px; outline: none; }
-        .chat-input input:focus { border-color: rgba(0,212,255,0.3); }
-        .chat-input button { background: linear-gradient(135deg, #00d4ff, #00ff88); border: none; border-radius: 12px; padding: 10px 20px; color: #0a0e14; font-weight: 700; cursor: pointer; font-size: 13px; }
-        .chat-input button:hover { opacity: 0.9; }
-        .chat-input button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .topbar .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-        .draft-panel { display: none; padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(139,92,246,0.05); }
-        .draft-panel.show { display: block; }
-        .draft-panel label { font-size: 11px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
-        .draft-panel .last-msg { font-size: 11px; color: #5a6a7e; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; margin-bottom: 8px; max-height: 60px; overflow-y: auto; }
-        .draft-panel textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; color: #e0e6ed; font-size: 12px; resize: vertical; min-height: 50px; outline: none; }
-        .draft-panel textarea:focus { border-color: rgba(139,92,246,0.3); }
-        .draft-actions { display: flex; gap: 8px; margin-top: 8px; }
-        .draft-actions button { border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
-        .btn-ai-refine { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
-        .btn-draft-send { background: linear-gradient(135deg, #00d4ff, #00ff88); color: #0a0e14; }
-        .btn-draft-cancel { background: rgba(255,255,255,0.05); color: #7a8a9e; border: 1px solid rgba(255,255,255,0.08); }
+        .topbar .brand i {
+            font-size: 18px;
+            color: #00d4ff;
+            filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.2));
+        }
 
-        .msg { max-width: 70%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
-        .msg.incoming { background: rgba(255,255,255,0.06); color: #e0e6ed; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg.manual { background: rgba(0,212,255,0.15); color: #e0e6ed; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .msg.ai-reply { background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2)); color: #e0e6ed; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(139,92,246,0.15); }
-        .msg.operator-ai { background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(168,85,247,0.2)); color: #e0e6ed; align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid rgba(168,85,247,0.15); }
-        .msg.error { background: rgba(239,68,68,0.15); color: #fca5a5; align-self: center; border-radius: 12px; }
-        .msg.system { background: rgba(0,212,255,0.08); color: #5a6a7e; align-self: center; border-radius: 12px; font-size: 11px; }
-        .msg .msg-sender { font-size: 10px; color: #00d4ff; font-weight: 600; margin-bottom: 4px; }
-        .msg .msg-time { font-size: 9px; color: #4a5a6e; margin-top: 4px; text-align: right; }
+        .topbar .brand h1 {
+            font-size: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-        .panel-right { background: #0d1420; border-left: 1px solid rgba(255,255,255,0.05); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; }
-        .panel-right h3 { font-size: 12px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-        .stat-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-card .label { font-size: 11px; color: #5a6a7e; }
-        .stat-card .value { font-size: 20px; font-weight: 700; color: #00d4ff; margin-top: 4px; }
+        .topbar .brand small {
+            font-size: 10px;
+            font-weight: 600;
+            color: #7a8a9e;
+            background: rgba(0, 212, 255, 0.08);
+            padding: 2px 10px;
+            border-radius: 40px;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            -webkit-text-fill-color: #7a8a9e;
+        }
 
-        .predefined-panel { flex: 1; overflow-y: auto; margin-top: 12px; }
-        .predefined-item { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; margin-bottom: 6px; cursor: pointer; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.03); }
-        .predefined-item:hover { background: rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.1); }
-        .predefined-item .pd-text { font-size: 12px; color: #e0e6ed; line-height: 1.3; }
-        .predefined-item .pd-tag { font-size: 10px; color: #5a6a7e; margin-top: 4px; }
+        .topbar .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 255, 136, 0.05);
+            padding: 4px 14px;
+            border-radius: 60px;
+            border: 1px solid rgba(0, 255, 136, 0.08);
+        }
 
-        .qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; }
-        .qr-container img { max-width: 280px; border-radius: 12px; background: white; padding: 16px; }
-        .qr-container p { color: #7a8a9e; font-size: 14px; }
+        .topbar .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse-dot 2s infinite;
+        }
 
-        .logs-container { margin-top: 16px; }
-        .logs-container h3 { margin-bottom: 8px; }
-        .log-line { font-size: 10px; color: #4a5a6e; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-family: monospace; word-break: break-all; }
+        .topbar .status-badge span {
+            color: #c8d6e5;
+            font-size: 12px;
+            font-weight: 500;
+        }
 
-        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #4a5a6e; gap: 12px; }
-        .empty-state i { font-size: 48px; color: #2a3a4e; }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
 
-        .toast { position: fixed; bottom: 20px; right: 20px; background: #1a2332; color: #e0e6ed; padding: 12px 20px; border-radius: 12px; font-size: 13px; border: 1px solid rgba(0,212,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
-        .toast.show { opacity: 1; transform: translateY(0); }
-        .toast.success { border-color: rgba(0,255,136,0.3); }
-        .toast.error { border-color: rgba(239,68,68,0.3); }
+        .main-area {
+            grid-column: 1 / 2;
+            grid-row: 2 / 4;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: 1px solid rgba(0, 212, 255, 0.04);
+        }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .contacts-grid-wrapper {
+            padding: 10px 14px 8px 14px;
+            background: linear-gradient(180deg, rgba(15, 23, 34, 0.95) 0%, rgba(20, 30, 45, 0.9) 100%);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.08);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
 
-        .btn-hamburger { display: none; background: none; border: none; color: #7a8a9e; font-size: 18px; cursor: pointer; padding: 4px 8px; }
-        .btn-back { display: none !important; background: none; border: none; color: #7a8a9e; font-size: 16px; cursor: pointer; padding: 4px 8px; margin-right: 4px; }
-        .sidebar-overlay { display: none; }
+        .contacts-grid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .contacts-grid-header h3 {
+            color: #7a8a9e;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .contacts-grid-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .contacts-grid-header .add-btn {
+            background: rgba(168, 85, 247, 0.08);
+            border: 1px solid rgba(168, 85, 247, 0.12);
+            color: #a855f7;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+
+        .contacts-grid-header .add-btn:hover {
+            background: rgba(168, 85, 247, 0.15);
+            border-color: rgba(168, 85, 247, 0.25);
+        }
+
+        .contacts-grid-header .search-mini {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #1a2634;
+            padding: 2px 10px;
+            border-radius: 40px;
+            border: 1px solid rgba(0, 212, 255, 0.06);
+        }
+
+        .contacts-grid-header .search-mini i {
+            color: #4b5a6e;
+            font-size: 10px;
+        }
+
+        .contacts-grid-header .search-mini input {
+            background: transparent;
+            border: none;
+            padding: 4px 2px;
+            color: #e6edf3;
+            font-size: 12px;
+            width: 100px;
+            outline: none;
+        }
+
+        .contacts-grid-header .search-mini input::placeholder {
+            color: #4b5a6e;
+        }
+
+        .contacts-grid {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 0 8px 0;
+            max-height: none;
+        }
+
+        .contacts-grid::-webkit-scrollbar {
+            height: 6px;
+        }
+        .contacts-grid::-webkit-scrollbar-track {
+            background: rgba(0, 212, 255, 0.05);
+            border-radius: 20px;
+            margin: 0 4px;
+        }
+        .contacts-grid::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, rgba(0, 212, 255, 0.4) 0%, rgba(99, 102, 241, 0.4) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        .contacts-grid::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(90deg, rgba(0, 212, 255, 0.6) 0%, rgba(99, 102, 241, 0.6) 100%);
+        }
+
+        
+.contact-card {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(59, 130, 246, 0.2) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    flex: 0 0 auto;
+    min-width: 180px;
+    height: 58px;
+    scroll-snap-align: start;
+}
+
+/* Efecto al pasar el mouse (se vuelve más brillante y alegre) */
+.contact-card:hover {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(99, 102, 241, 0.3) 100%);
+    border-color: rgba(6, 182, 212, 0.6);
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+}
+
+
+
+
+        @media (max-width: 700px) {
+            .contacts-grid {
+                display: flex;
+                overflow-x: auto;
+                overflow-y: hidden;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                gap: 10px;
+                padding: 4px 0;
+                max-height: none;
+            }
+
+            .contacts-grid::-webkit-scrollbar {
+                height: 0;
+                display: none;
+            }
+
+            .contact-card {
+                flex: 0 0 calc(100% - 20px);
+                scroll-snap-align: start;
+                min-width: calc(100% - 20px);
+                height: 60px;
+            }
+
+            .contact-card .avatar-mini {
+                width: 36px;
+                height: 36px;
+                font-size: 13px;
+            }
+
+            .contact-card .info-mini .name-mini {
+                font-size: 13px;
+            }
+
+            .contact-card .info-mini .number-mini {
+                font-size: 11px;
+            }
+        }
+
+        .contact-card:hover {
+            background: #1f2d3d;
+            border-color: rgba(0, 212, 255, 0.1);
+        }
+
+        .contact-card.active {
+            background: #1a2a38;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.04);
+        }
+
+        .contact-card .avatar-mini {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #0a0e14;
+            flex-shrink: 0;
+        }
+
+        .contact-card .info-mini {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .contact-card .info-mini .name-mini {
+            font-weight: 600;
+            font-size: 14px;
+            color: #e6edf3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .contact-card .info-mini .number-mini {
+            font-size: 12px;
+            color: #7a8a9e;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .contact-card .badge-mini {
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            padding: 3px 10px;
+            border-radius: 40px;
+            white-space: nowrap;
+        }
+
+        .contact-card .badge-mini.paused {
+            background: rgba(255, 193, 7, 0.08);
+            color: #fbbf24;
+        }
+
+        .contact-card .badge-mini.saved-badge {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+        }
+
+        .contact-card .unread-mini {
+            background: #ff3366;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+        }
+
+        /* Contactos guardados - Estilo púrpura */
+        .contact-card.saved {
+            border-color: rgba(168, 85, 247, 0.15);
+        }
+
+        .contact-card.saved:hover {
+            border-color: rgba(168, 85, 247, 0.3);
+            background: #1f2d3d;
+        }
+
+        .contact-card.saved .avatar-mini {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+        }
+
+        .contact-card.saved .badge-mini {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+        }
+
+        .contact-card.active {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.4) 0%, rgba(99, 102, 241, 0.35) 100%);
+            border-color: rgba(6, 182, 212, 0.6);
+            box-shadow: 
+                0 0 20px rgba(6, 182, 212, 0.2),
+                inset 0 0 15px rgba(6, 182, 212, 0.08);
+        }
+
+        .contact-card.saved.active {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.4) 0%, rgba(139, 92, 246, 0.35) 100%);
+            border-color: rgba(168, 85, 247, 0.6);
+            box-shadow: 
+                0 0 20px rgba(168, 85, 247, 0.2),
+                inset 0 0 15px rgba(168, 85, 247, 0.08);
+        }
+
+        .contact-card.unread {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
+            border-color: rgba(239, 68, 68, 0.35);
+            box-shadow: 
+                0 0 15px rgba(239, 68, 68, 0.1),
+                inset 0 0 10px rgba(239, 68, 68, 0.05);
+        }
+
+        .contact-card.unread:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.28) 0%, rgba(220, 38, 38, 0.22) 100%);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .contact-card.unread .avatar-mini {
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .contact-card.saved .saved-actions {
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            transition: 0.15s;
+        }
+
+        .contact-card.saved:hover .saved-actions {
+            opacity: 1;
+        }
+
+        .contact-card.saved .saved-actions .action-btn {
+            background: transparent;
+            border: none;
+            color: #5f738c;
+            font-size: 10px;
+            cursor: pointer;
+            padding: 3px 5px;
+            border-radius: 4px;
+            transition: 0.15s;
+        }
+
+        .contact-card.saved .saved-actions .action-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #c8d6e5;
+        }
+
+        .contact-card.saved .saved-actions .action-btn.delete:hover {
+            color: #ff6b8a;
+        }
+
+        .contact-card.saved .saved-actions .action-btn.edit:hover {
+            color: #a855f7;
+        }
+
+        .contact-card.saved .saved-actions .action-btn.note-btn-saved {
+            color: #fbbf24;
+        }
+
+        .contact-card.saved .saved-actions .action-btn.note-btn-saved:hover {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.15);
+        }
+
+        .contact-card.saved .saved-actions .action-btn.note-btn-saved.has-note {
+            color: #fbbf24;
+            opacity: 1;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #0B121A;
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(0, 210, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(140, 82, 255, 0.03) 0%, transparent 50%);
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.12);
+            border-radius: 20px;
+        }
+
+        .msg {
+            max-width: 72%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+            animation: fade-in 0.2s ease;
+            position: relative;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .msg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 40%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .msg.incoming {
+            align-self: flex-start;
+            background: linear-gradient(135deg, rgba(34,197,94,0.5) 0%, rgba(16,185,129,0.45) 40%, rgba(6,182,212,0.4) 100%);
+            border-bottom-left-radius: 4px;
+            color: #ffffff;
+            border: 1px solid rgba(6, 182, 212, 0.55);
+            box-shadow: 
+                0 4px 24px rgba(6, 182, 212, 0.25),
+                0 0 60px rgba(16, 185, 129, 0.12),
+                0 0 100px rgba(6, 182, 212, 0.06),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .msg.outgoing, .msg.manual {
+            align-self: flex-end;
+            background: linear-gradient(135deg, rgba(255,107,53,0.5) 0%, rgba(236,72,153,0.45) 40%, rgba(192,38,211,0.4) 100%);
+            border-bottom-right-radius: 4px;
+            color: #ffffff;
+            border: 1px solid rgba(255, 107, 53, 0.35);
+            box-shadow: 
+                0 4px 24px rgba(255, 107, 53, 0.18),
+                0 0 50px rgba(236, 72, 153, 0.06),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+
+       .msg.ai-reply {
+    align-self: flex-start;
+    
+    /* 1. Ajustamos el color: bajamos la opacidad del fondo 
+       para que el desenfoque se note más */
+    background: linear-gradient(135deg, 
+        rgba(59, 130, 246, 0.3) 0%, 
+        rgba(99, 102, 241, 0.25) 40%, 
+        rgba(139, 92, 246, 0.2) 100%);
+    
+    /* 2. ESTA ES LA CLAVE: Crea el efecto de vidrio esmerilado */
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(12px); /* Soporte para Safari */
+    
+    border-bottom-left-radius: 4px;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Borde más sutil */
+    
+    box-shadow: 
+        0 4px 24px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+      .msg.operator-ai {
+    align-self: flex-end;
+
+    /* 1. Fondo con transparencia muy alta (opacidad entre 0.1 y 0.2) */
+    background: linear-gradient(135deg, 
+        rgba(124, 58, 237, 0.2) 0%, 
+        rgba(139, 92, 246, 0.15) 35%, 
+        rgba(192, 132, 252, 0.12) 65%, 
+        rgba(236, 72, 153, 0.1) 100%);
+
+    /* 2. Efecto de vidrio: desenfoca lo que hay detrás */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+
+    /* 3. Borde sutil para definir los límites del cristal */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    
+    border-bottom-right-radius: 4px;
+    color: #ffffff;
+
+    /* 4. Sombra suave para que el cristal "flote" */
+    box-shadow: 
+        0 4px 24px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+        .msg.system {
+            align-self: center;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.15) 0%, rgba(0, 229, 255, 0.06) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            color: #00E5FF;
+            font-size: 12px;
+            max-width: 90%;
+            text-align: center;
+            border-radius: 24px;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.08);
+        }
+
+        .msg.error {
+            background: linear-gradient(135deg, rgba(239,68,68,0.5) 0%, rgba(220,38,38,0.45) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
+        }
+
+        .msg .meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 4px;
+        }
+
+        .msg .meta .from {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .msg .meta .time {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        }
+
+        @keyframes fade-in {
+            0% { opacity: 0; transform: translateY(3px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .empty-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #4b5a6e;
+            text-align: center;
+            gap: 8px;
+            background-color: #41484a00;
+        }
+
+        .empty-chat i {
+            font-size: 40px;
+            color: #1a2634;
+        }
+
+        .empty-chat p {
+            font-size: 14px;
+        }
+
+        .composer {
+            padding: 4px 12px 4px 12px;
+            background: rgba(17, 26, 38, 0.9);
+            border-top: 1px solid rgba(0, 212, 255, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            margin-top: 0;
+        }
+
+        .composer .input-phone {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+            border-radius: 0;
+            padding: 8px 4px;
+            color: #e6edf3;
+            font-size: 13px;
+            width: 120px;
+            outline: none;
+            transition: 0.3s;
+            text-align: center;
+        }
+
+        .composer .input-phone:focus {
+            border-bottom-color: #00d4ff;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .composer .input-msg {
+            flex: 1;
+            background: rgba(26, 38, 52, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 40px;
+            padding: 10px 16px;
+            color: #e6edf3;
+            font-size: 14px;
+            outline: none;
+            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.05);
+        }
+
+        .composer .input-msg:focus {
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 0 25px rgba(0, 212, 255, 0.12), inset 0 0 10px rgba(0, 212, 255, 0.03);
+        }
+
+        .composer .input-msg::placeholder,
+        .composer .input-phone::placeholder {
+            color: #4b5a6e;
+        }
+
+        .composer .send-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .composer .send-group .tool-btn {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(6, 182, 212, 0.25);
+            color: #00d4ff;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            box-shadow: 0 2px 12px rgba(6, 182, 212, 0.1);
+        }
+
+        .composer .send-group .tool-btn:hover {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
+            border-color: rgba(6, 182, 212, 0.5);
+            color: #22d3ee;
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.2);
+            transform: scale(1.05);
+        }
+
+        .composer .send-group .tool-btn.active {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.3) 0%, rgba(99, 102, 241, 0.25) 100%);
+            border-color: rgba(6, 182, 212, 0.6);
+            color: #22d3ee;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);
+        }
+
+        .composer .send-group .separator {
+            width: 1px;
+            height: 24px;
+            background: linear-gradient(180deg, rgba(6, 182, 212, 0.3) 0%, rgba(99, 102, 241, 0.3) 100%);
+            margin: 0 4px;
+        }
+
+        .composer .send-group .action-btn {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            color: #a78bfa;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            box-shadow: 0 2px 12px rgba(139, 92, 246, 0.1);
+        }
+
+        .composer .send-group .action-btn:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(168, 85, 247, 0.2) 100%);
+            border-color: rgba(139, 92, 246, 0.5);
+            color: #c4b5fd;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.2);
+            transform: scale(1.05);
+        }
+
+        .composer .send-group .action-btn.danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.1);
+        }
+
+        .composer .send-group .action-btn.danger:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.2) 100%);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+            transform: scale(1.05);
+        }
+
+        .composer .send-group #toggleReadBtn {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #22c55e;
+            box-shadow: 0 2px 12px rgba(34, 197, 94, 0.15);
+        }
+
+        .composer .send-group #toggleReadBtn:hover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.35) 0%, rgba(16, 185, 129, 0.25) 100%);
+            border-color: rgba(34, 197, 94, 0.7);
+            color: #4ade80;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+            transform: scale(1.05);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-preview {
+            display: none;
+            padding: 8px 12px;
+            background: rgba(17, 26, 38, 0.95);
+            border-top: 1px solid rgba(6, 182, 212, 0.15);
+            align-items: center;
+            gap: 12px;
+            animation: slideUp 0.2s ease;
+        }
+
+        .file-preview.active {
+            display: flex;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-preview .file-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+            border: 1px solid rgba(6, 182, 212, 0.25);
+        }
+
+        .file-preview .file-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-preview .file-thumb i {
+            font-size: 20px;
+            color: #00d4ff;
+        }
+
+        .file-preview .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-preview .file-info .file-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #e6edf3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-preview .file-info .file-size {
+            font-size: 10px;
+            color: #7a8a9e;
+        }
+
+        .file-preview .file-cancel {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .file-preview .file-cancel:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.35) 0%, rgba(220, 38, 38, 0.25) 100%);
+            border-color: rgba(239, 68, 68, 0.6);
+            transform: scale(1.1);
+        }
+
+        .composer button.send-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border: none;
+            color: #0a0e14;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 40px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .composer button.send-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 24px rgba(0, 212, 255, 0.12);
+        }
+
+        .right-panel {
+            grid-column: 2 / -1;
+            grid-row: 2 / 4;
+            background: #0f1722;
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            overflow: hidden;
+            gap: 6px;
+        }
+
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-top: -5px;
+            margin-bottom: 8px;
+        }
+
+        .panel-section:first-child {
+            flex: 1;
+            max-height: 170px;
+        }
+
+        .panel-section:last-child {
+            flex: 1;
+        }
+
+        .panel-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .panel-section-header h3 {
+            color: #7a8a9e;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .panel-section-header h3 i {
+            color: #00d4ff;
+            font-size: 11px;
+        }
+
+        .panel-section-header .hint {
+            font-size: 9px;
+            color: #4b5a6e;
+            font-weight: 400;
+        }
+
+        .predefined-list, .saved-contacts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .predefined-list::-webkit-scrollbar, .saved-contacts-list::-webkit-scrollbar {
+            width: 3px;
+        }
+        .predefined-list::-webkit-scrollbar-thumb, .saved-contacts-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 20px;
+        }
+
+        .predefined-item {
+            background: linear-gradient(135deg, rgba(26, 38, 52, 0.9) 0%, rgba(30, 45, 60, 0.8) 100%);
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(0, 212, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .predefined-item:hover {
+            background: linear-gradient(135deg, rgba(30, 45, 60, 0.95) 0%, rgba(40, 58, 78, 0.85) 100%);
+            border-color: rgba(0, 212, 255, 0.12);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .predefined-item .item-number {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            font-size: 10px;
+            font-weight: 700;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .predefined-item .emoji {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .predefined-item .text-preview {
+            flex: 1;
+            font-size: 13px;
+            color: #c8d6e5;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .predefined-item .badge-tag {
+            font-size: 8px;
+            font-weight: 600;
+            background: rgba(0, 212, 255, 0.06);
+            color: #5f738c;
+            padding: 1px 6px;
+            border-radius: 40px;
+            white-space: nowrap;
+            border: 1px solid rgba(0, 212, 255, 0.04);
+        }
+
+        .predefined-item .item-actions {
+            display: flex;
+            gap: 0;
+            opacity: 1;
+            width: 50%;
+            justify-content: flex-end;
+        }
+
+        .predefined-item:hover .item-actions {
+            opacity: 1;
+        }
+
+        .predefined-item .tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #1a2634;
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            max-width: 250px;
+            font-size: 11px;
+            color: #c8d6e5;
+            line-height: 1.4;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            margin-bottom: 4px;
+        }
+
+        .predefined-item:hover .tooltip {
+            display: block;
+        }
+
+        .item-action-btn {
+            background: transparent;
+            border: none;
+            color: #5f738c;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: 0.15s;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .item-action-btn:last-child {
+            border-right: none;
+        }
+
+        .item-action-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #c8d6e5;
+        }
+
+        .item-action-btn.copy-btn {
+            color: #00d4ff;
+        }
+
+        .item-action-btn.copy-btn:hover {
+            background: rgba(0, 212, 255, 0.1);
+            color: #22d3ee;
+        }
+
+        .item-action-btn.edit-btn {
+            color: #fbbf24;
+        }
+
+        .item-action-btn.edit-btn:hover {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fcd34d;
+        }
+
+        .item-action-btn.delete {
+            color: #f87171;
+        }
+
+        .item-action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+        }
+
+        .item-action-btn.ai-btn {
+            color: #a78bfa;
+        }
+
+        .item-action-btn.ai-btn:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%);
+            color: #c4b5fd;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .draft-panel {
+            display: none;
+            padding: 12px 20px 14px 20px;
+            background: rgba(17, 26, 38, 0.97);
+            border-top: 1px solid rgba(168, 85, 247, 0.08);
+            flex-shrink: 0;
+        }
+
+        .draft-panel.open {
+            display: block;
+        }
+
+        .draft-panel .draft-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .draft-panel .draft-header h4 {
+            color: #c084fc;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .draft-panel .draft-header button {
+            background: transparent;
+            border: none;
+            color: #5f738c;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .draft-panel .draft-user-msg {
+            background: #1a2634;
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-left: 2px solid #a855f7;
+        }
+
+        .draft-panel .draft-user-msg strong {
+            font-size: 10px;
+            color: #7a8a9e;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .draft-panel .draft-user-msg p {
+            color: #e6edf3;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .draft-panel textarea {
+            width: 100%;
+            background: #111a26;
+            border: 1px solid rgba(168, 85, 247, 0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #e6edf3;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 60px;
+            outline: none;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .draft-panel textarea:focus {
+            border-color: rgba(168, 85, 247, 0.2);
+        }
+
+        .draft-panel .draft-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .draft-panel .draft-actions button {
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .draft-panel .draft-actions .btn-send {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: #fff;
+            flex: 1;
+        }
+
+        .draft-panel .draft-actions .btn-send:hover {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+        }
+
+        .draft-panel .draft-actions .btn-cancel {
+            background: rgba(255, 255, 255, 0.03);
+            color: #7a8a9e;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .draft-panel .draft-actions .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #111a26;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal h3 {
+            color: #e6edf3;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        .modal input, .modal textarea {
+            width: 100%;
+            background: #1a2634;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #e6edf3;
+            font-size: 13px;
+            outline: none;
+            margin-bottom: 12px;
+            font-family: inherit;
+        }
+
+        .modal input:focus, .modal textarea:focus {
+            border-color: rgba(0, 212, 255, 0.15);
+        }
+
+        .modal .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .modal .modal-actions button {
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .modal .modal-actions .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #0a0e14;
+        }
+
+        .modal .modal-actions .btn-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            color: #7a8a9e;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        /* Contact Notes - Carousel */
+        .contact-card .notes-mini {
+            position: absolute;
+            bottom: 2px;
+            left: 50px;
+            right: 60px;
+            font-size: 9px;
+            color: #5f738c;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-style: italic;
+        }
+
+        .contact-card .note-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            color: #fbbf24;
+            font-size: 9px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.2s ease;
+            z-index: 5;
+        }
+
+        .contact-card:hover .note-btn {
+            opacity: 1;
+        }
+
+        .contact-card .note-btn:hover {
+            background: rgba(251, 191, 36, 0.25);
+            border-color: rgba(251, 191, 36, 0.5);
+            transform: scale(1.1);
+        }
+
+        .contact-card .note-btn.has-note {
+            opacity: 1;
+            background: rgba(251, 191, 36, 0.2);
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+
+        /* Notes Modal */
+        .notes-modal .modal {
+            max-width: 360px;
+        }
+
+        .notes-modal .modal h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notes-modal .modal h3 i {
+            color: #fbbf24;
+        }
+
+        .notes-modal .modal textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* Sidebar Notes */
+        .sidebar-contact-item .sidebar-notes {
+            font-size: 10px;
+            color: #fbbf24;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-style: italic;
+            margin-top: 2px;
+        }
+
+        .sidebar-contact-item .sidebar-note-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            color: #fbbf24;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .sidebar-contact-item .sidebar-note-btn:hover {
+            background: rgba(251, 191, 36, 0.25);
+            border-color: rgba(251, 191, 36, 0.5);
+            transform: scale(1.1);
+        }
 
         @media (max-width: 1100px) {
-            .dashboard { grid-template-columns: 260px 1fr; }
-            .panel-right { display: none; }
+            .dashboard {
+                grid-template-columns: 1fr;
+                grid-template-rows: 44px 1fr auto;
+                max-height: none;
+                height: auto;
+            }
+
+            .main-area {
+                grid-column: 1 / -1;
+                grid-row: 2 / 3;
+                border-right: none;
+                min-height: 500px;
+            }
+
+            .right-panel {
+                grid-column: 1 / -1;
+                grid-row: 3 / 4;
+                border-top: 1px solid rgba(0, 212, 255, 0.04);
+                min-height: 200px;
+                max-height: 280px;
+                flex-direction: row;
+            }
+
+            .panel-section {
+                flex: 1;
+            }
+
+            .contacts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
         }
+
         @media (max-width: 700px) {
-            body { padding: 0; }
-            .dashboard { grid-template-columns: 1fr; grid-template-rows: 50px 1fr; border-radius: 0; height: 100vh; max-height: none; }
+            body {
+                padding: 0;
+            }
 
-            .topbar { padding: 0 10px; gap: 6px; }
-            .topbar h1 { font-size: 13px; }
-            .topbar .btn-text { display: none; }
-            .topbar button { padding: 6px 8px !important; font-size: 14px !important; min-width: 36px; justify-content: center; }
-            .status-badge { padding: 3px 8px; font-size: 10px; }
-            .status-badge .dot { width: 6px; height: 6px; }
+            .dashboard {
+                border-radius: 0;
+                height: 100vh;
+                max-height: none;
+            }
 
-            .sidebar { display: none; position: fixed; top: 50px; left: 0; bottom: 0; width: 280px; z-index: 200; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
-            .sidebar.show-mobile { display: flex; }
-            .sidebar-overlay { display: none; position: fixed; top: 50px; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 199; }
-            .sidebar-overlay.show-mobile { display: block; }
+            .topbar {
+                padding: 0 16px;
+            }
 
-            .contact-item { padding: 14px 16px; min-height: 56px; }
-            .contact-avatar { width: 42px; height: 42px; font-size: 15px; }
+            .topbar .brand h1 {
+                font-size: 16px;
+            }
 
-            .chat-header { padding: 10px 12px; }
-            .chat-header-info h3 { font-size: 13px; }
-            .chat-header-actions { gap: 4px; }
-            .chat-header-actions button { padding: 6px 8px; font-size: 11px; }
-            .btn-back { display: flex !important; }
+            .topbar .status-badge span {
+                font-size: 12px;
+            }
 
-            .chat-messages { padding: 12px; }
-            .msg { max-width: 85%; font-size: 13px; padding: 10px 12px; }
+            .composer {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
 
-            .chat-input { padding: 10px 12px; gap: 6px; }
-            .chat-input input { padding: 12px 14px; font-size: 16px; border-radius: 10px; }
-            .chat-input button { padding: 12px 16px; font-size: 13px; border-radius: 10px; }
+            .composer .input-phone {
+                width: 100%;
+            }
 
-            .draft-panel { padding: 10px 12px; }
-            .draft-panel textarea { min-height: 60px; font-size: 14px; padding: 10px; }
+            .composer .send-group {
+                width: 100%;
+                justify-content: flex-end;
+            }
 
-            .qr-container img { max-width: 220px; padding: 12px; }
-            .qr-container p { font-size: 13px; }
+            .messages {
+                padding: 12px 14px;
+            }
 
-            .empty-state i { font-size: 40px; }
-            .empty-state p { font-size: 13px; padding: 0 20px; text-align: center; }
+            .msg {
+                max-width: 90%;
+                font-size: 13px;
+            }
 
-            .toast { left: 12px; right: 12px; bottom: 12px; font-size: 12px; text-align: center; }
+            .right-panel {
+                flex-direction: column;
+                max-height: 300px;
+            }
         }
-        @media (max-width: 400px) {
-            .topbar h1 { font-size: 12px; }
-            .topbar button { padding: 5px 6px !important; min-width: 32px; }
+
+        /* Contacts Sidebar */
+        .contacts-sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .contacts-sidebar-overlay.active {
+            display: flex;
+        }
+
+        .contacts-sidebar {
+            width: 340px;
+            max-width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0d1520 0%, #111a28 50%, #0d1520 100%);
+            border-right: 1px solid rgba(0, 212, 255, 0.1);
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .contacts-sidebar-overlay.active .contacts-sidebar {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 18px;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+        }
+
+        .sidebar-header h3 {
+            color: #e6edf3;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header h3 i {
+            color: #00d4ff;
+        }
+
+        .sidebar-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-close:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.6);
+            transform: scale(1.1);
+        }
+
+        .sidebar-search {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 18px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.06);
+        }
+
+        .sidebar-search i {
+            color: #4b5a6e;
+            font-size: 14px;
+        }
+
+        .sidebar-search input {
+            flex: 1;
+            background: rgba(26, 38, 52, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 40px;
+            padding: 10px 14px;
+            color: #e6edf3;
+            font-size: 13px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .sidebar-search input:focus {
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+        }
+
+        .sidebar-search input::placeholder {
+            color: #4b5a6e;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 10px;
+        }
+
+        .sidebar-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+        }
+
+        .sidebar-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(0, 212, 255, 0.3) 0%, rgba(99, 102, 241, 0.3) 100%);
+            border-radius: 20px;
+        }
+
+        .sidebar-contact-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-contact-item:hover {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+
+        .sidebar-contact-item.active {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
+            border-color: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+        }
+
+        .sidebar-contact-item.unread {
+            border-left: 3px solid #ff3366;
+        }
+
+        .sidebar-contact-item .sidebar-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #0a0e14;
+            flex-shrink: 0;
+        }
+
+        .sidebar-contact-item.saved .sidebar-avatar {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: #ffffff;
+        }
+
+        .sidebar-contact-item .sidebar-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar-contact-item .sidebar-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #e6edf3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-contact-item .sidebar-number {
+            font-size: 12px;
+            color: #7a8a9e;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-contact-item .sidebar-last-msg {
+            font-size: 11px;
+            color: #5f738c;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .sidebar-contact-item .sidebar-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 40px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .sidebar-contact-item .sidebar-badge.ia {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+        }
+
+        .sidebar-contact-item .sidebar-badge.paused {
+            background: rgba(255, 193, 7, 0.1);
+            color: #fbbf24;
+        }
+
+        .sidebar-contact-item .sidebar-badge.saved-badge {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+        }
+
+        .sidebar-contact-item .sidebar-unread {
+            background: #ff3366;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-empty {
+            text-align: center;
+            color: #4b5a6e;
+            font-size: 13px;
+            padding: 30px 20px;
+        }
+
+        .sidebar-empty i {
+            display: block;
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #2a3a4e;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            gap: 4px;
+            padding: 12px 18px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.06);
+        }
+
+        .sidebar-nav-item {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            background: rgba(0, 0, 0, 0.15);
+            color: #7a8a9e;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .sidebar-nav-item:hover {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.2);
+            color: #c8d6e5;
+        }
+
+        .sidebar-nav-item.active {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
+            border-color: rgba(6, 182, 212, 0.4);
+            color: #00d4ff;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+        }
+
+        .sidebar-nav-item i {
+            font-size: 12px;
+        }
+
+        .sidebar-tab-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .call-log-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            background: rgba(0, 0, 0, 0.15);
+            margin-bottom: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .call-log-item:hover {
+            background: rgba(6, 182, 212, 0.08);
+            border-color: rgba(0, 212, 255, 0.15);
+        }
+
+        .call-log-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .call-log-icon.voice {
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: #00d4ff;
+        }
+
+        .call-log-icon.video {
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #a855f7;
+        }
+
+        .call-log-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .call-log-number {
+            font-weight: 600;
+            font-size: 13px;
+            color: #e6edf3;
+        }
+
+        .call-log-type {
+            font-size: 11px;
+            color: #7a8a9e;
+            margin-top: 2px;
+        }
+
+        .call-log-time {
+            font-size: 10px;
+            color: #5f738c;
+            margin-top: 2px;
+        }
+
+        .call-log-empty {
+            text-align: center;
+            color: #4b5a6e;
+            font-size: 13px;
+            padding: 30px 20px;
+        }
+
+        .call-log-empty i {
+            display: block;
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #2a3a4e;
+        }
+
+        .call-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.06);
+        }
+
+        .call-log-header h4 {
+            color: #e6edf3;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .call-log-clear-btn {
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .call-log-clear-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .config-section {
+            padding: 18px;
+        }
+
+        .config-section h4 {
+            color: #e6edf3;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .config-section h4 i {
+            color: #00d4ff;
+        }
+
+        .config-toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            background: rgba(0, 0, 0, 0.15);
+            margin-bottom: 14px;
+        }
+
+        .config-toggle-row label {
+            color: #c8d6e5;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .config-toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .config-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .config-toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+        }
+
+        .config-toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background: #7a8a9e;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .config-toggle input:checked + .config-toggle-slider {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.3) 0%, rgba(99, 102, 241, 0.3) 100%);
+            border-color: rgba(6, 182, 212, 0.4);
+        }
+
+        .config-toggle input:checked + .config-toggle-slider:before {
+            transform: translateX(20px);
+            background: #00d4ff;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+        }
+
+        .config-textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #e6edf3;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+            outline: none;
+            margin-bottom: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .config-textarea:focus {
+            border-color: rgba(0, 212, 255, 0.25);
+        }
+
+        .config-textarea::placeholder {
+            color: #4b5a6e;
+        }
+
+        .config-save-btn {
+            width: 100%;
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #0a0e14;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .config-save-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .config-success {
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .contacts-grid-header h3 {
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .contacts-grid-header h3:hover {
+            color: #00d4ff;
+        }
+
+        @media (max-width: 700px) {
+            .contacts-sidebar {
+                width: 100%;
+            }
+        }
+
+        /* === TOPBAR BUTTONS === */
+        .topbar-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #7a8a9e;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .disconnect-btn:hover { background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+        .restart-btn:hover { background: rgba(251,191,36,0.15); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+
+        /* === STATUS BADGE STATES === */
+        #statusBadge.connecting .dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+        #statusBadge.connecting { border-color: rgba(251,191,36,0.2); color: #fbbf24; }
+        #statusBadge.connected .dot { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+        #statusBadge.connected { border-color: rgba(0,255,136,0.2); color: #00ff88; }
+        #statusBadge.disconnected .dot { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        #statusBadge.disconnected { border-color: rgba(239,68,68,0.2); color: #ef4444; }
+        #statusBadge.qr .dot { background: #a855f7; box-shadow: 0 0 8px #a855f7; animation: pulse-dot 1s infinite; }
+        #statusBadge.qr { border-color: rgba(168,85,247,0.2); color: #a855f7; }
+
+        /* === QR OVERLAY === */
+        .qr-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(10,14,20,0.97);
+            z-index: 50;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            backdrop-filter: blur(8px);
+        }
+        .qr-overlay.active { display: flex; }
+        .qr-overlay img { max-width: 260px; border-radius: 16px; background: #fff; padding: 16px; box-shadow: 0 0 40px rgba(0,212,255,0.15); }
+        .qr-overlay .qr-label { color: #7a8a9e; font-size: 14px; font-weight: 500; }
+        .qr-overlay .qr-countdown { color: #fbbf24; font-size: 12px; font-weight: 600; }
+        .qr-overlay .qr-expired { color: #ef4444; font-size: 13px; font-weight: 600; display: none; }
+        .qr-overlay .qr-hint { color: #4b5a6e; font-size: 11px; max-width: 300px; text-align: center; line-height: 1.4; }
+
+        /* === HAMBURGER MENU (mobile) === */
+        #openSidebar { display: none; }
+        @media (max-width: 1100px) {
+            #openSidebar { display: block; }
         }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <div class="topbar">
-            <div style="display:flex;align-items:center;gap:8px;">
-                <button class="btn-hamburger" id="btnHamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-                <h1><i class="fab fa-whatsapp"></i> Bot WhatsApp Panel</h1>
+
+<div class="dashboard">
+
+    <!-- QR Overlay -->
+    <div class="qr-overlay" id="qrOverlay">
+        <i class="fas fa-qrcode" style="font-size:40px; color:#a855f7;"></i>
+        <div class="qr-label">Escanea el código QR con WhatsApp</div>
+        <img id="qrImage" src="" alt="QR Code" />
+        <div class="qr-countdown" id="qrCountdown"></div>
+        <div class="qr-expired" id="qrExpired"><i class="fas fa-exclamation-triangle"></i> QR expirado. Esperando nuevo código...</div>
+        <div class="qr-hint">Abre WhatsApp en tu teléfono → Menú → Dispositivos vinculados → Vincular dispositivo</div>
+    </div>
+
+    <header class="topbar">
+        <div class="brand">
+            <i class="fas fa-bars" id="openSidebar" style="cursor:pointer; font-size:16px; color:#7a8a9e; margin-right:4px;" title="Menú"></i>
+            <i class="fas fa-bolt"></i>
+            <h1>N1 NEXUS <small>VIP</small></h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <div class="status-badge" id="statusBadge">
+                <span class="dot" id="statusDot"></span>
+                <span id="statusText">Conectando...</span>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-                <button onclick="disconnectWhatsApp()" title="Desconectar sesion" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px 12px;color:#ef4444;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-power-off"></i> Desconectar
-                </button>
-                <button onclick="restartBot()" title="Reiniciar bot" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:6px 12px;color:#fbbf24;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-rotate-right"></i> Reiniciar
-                </button>
-                <div class="status-badge" id="statusBadge">
-                    <div class="dot"></div>
-                    <span id="statusText">Conectando...</span>
+            <button class="topbar-btn disconnect-btn" id="disconnectBtn" title="Desconectar WhatsApp"><i class="fas fa-sign-out-alt"></i></button>
+            <button class="topbar-btn restart-btn" id="restartBtn" title="Reiniciar bot"><i class="fas fa-sync-alt"></i></button>
+        </div>
+    </header>
+
+    <div class="main-area">
+        <div class="contacts-grid-wrapper">
+            <div class="contacts-grid-header">
+                <h3><i class="fas fa-users" style="margin-right: 6px;"></i> Contactos</h3>
+                <div class="header-actions">
+                    <button class="add-btn" id="addContactBtn"><i class="fas fa-plus"></i> Nuevo</button>
+                    <div class="search-mini">
+                        <i class="fas fa-search"></i>
+                        <input id="contactSearch" type="text" placeholder="Filtrar..." />
+                    </div>
                 </div>
             </div>
+            <div class="contacts-grid" id="contactGrid"></div>
         </div>
 
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h2><i class="fas fa-users"></i> Contactos</h2>
-                <span id="contactCount" style="font-size:12px;color:#5a6a7e;">0</span>
+        <div class="chat-area">
+            <div class="messages" id="messagesBox">
+                <div class="empty-chat">
+                    <i class="fas fa-comment-dots"></i>
+                    <p>Selecciona un contacto para ver la conversación</p>
+                </div>
             </div>
-            <div class="sidebar-search">
-                <input type="text" id="searchInput" placeholder="Buscar contacto..." oninput="filterContacts()" />
-            </div>
-            <div id="contactList"></div>
-        </div>
-        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-        <div class="chat-area" id="chatArea">
-            <div class="qr-container" id="qrContainer" style="display:none;">
-                <i class="fab fa-whatsapp" style="font-size:48px;color:#25D366;"></i>
-                <img id="qrImage" src="" alt="QR Code" />
-                <p>Escanea el codigo QR con WhatsApp</p>
-                <p id="qrCountdown" style="font-size:12px;color:#7a8a9e;margin-top:-8px;"></p>
-            </div>
-            <div class="empty-state" id="emptyState">
-                <i class="fab fa-whatsapp"></i>
-                <p>Selecciona un contacto o espera conexion</p>
-            </div>
-            <div id="chatView" style="display:none;flex-direction:column;height:100%;">
-                <div class="chat-header">
-                    <div style="display:flex;align-items:center;">
-                        <button class="btn-back" id="btnBack" onclick="goBack()"><i class="fas fa-arrow-left"></i></button>
-                        <div class="chat-header-info">
-                            <h3 id="chatName">-</h3>
-                            <span id="chatNumber">-</span>
-                        </div>
-                    </div>
-                    <div class="chat-header-actions">
-                        <button id="btnToggleBot" onclick="toggleBot()" title="Pausar/Reanudar IA">
-                            <i class="fas fa-robot"></i> IA
-                        </button>
-                        <button id="btnDraft" onclick="toggleDraft()" title="Borrador con IA">
-                            <i class="fas fa-wand-magic-sparkles"></i>
-                        </button>
-                        <button class="danger" onclick="deleteChat()" title="Eliminar chat">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+            <div class="draft-panel" id="draftPanel">
+                <div class="draft-header">
+                    <h4><i class="fas fa-feather-alt"></i> Escribe tu respuesta</h4>
+                    <button id="closeDraftBtn">&times;</button>
                 </div>
-                <div class="chat-messages" id="chatMessages"></div>
-                <div class="draft-panel" id="draftPanel">
-                    <label><i class="fas fa-wand-magic-sparkles"></i> Borrador con IA</label>
-                    <div class="last-msg" id="draftLastMsg">-</div>
-                    <textarea id="draftInput" placeholder="Escribe un borrador y la IA lo refinará..."></textarea>
-                    <div class="draft-actions">
-                        <button class="btn-ai-refine" onclick="sendDraft()"><i class="fas fa-magic"></i> Refinar con IA</button>
-                        <button class="btn-draft-cancel" onclick="toggleDraft()">Cancelar</button>
-                    </div>
+                <div class="draft-user-msg">
+                    <strong>Mensaje del usuario:</strong>
+                    <p id="draftUserMsg">—</p>
                 </div>
-                <div class="chat-input-area">
-                    <div class="chat-input">
-                        <input type="text" id="messageInput" placeholder="Escribe un mensaje..." />
-                        <button id="btnSend" onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Enviar</button>
-                    </div>
+                <textarea id="draftText" placeholder="Escribe tu respuesta aquí... La IA la refinará antes de enviar."></textarea>
+                <div class="draft-actions">
+                    <button class="btn-send" id="sendDraftBtn"><i class="fas fa-paper-plane"></i> Enviar a IA</button>
+                    <button class="btn-cancel" id="cancelDraftBtn">Cancelar</button>
                 </div>
             </div>
-        </div>
 
-        <div class="panel-right">
-            <h3><i class="fas fa-chart-bar"></i> Panel</h3>
-            <div class="stat-card">
-                <div class="label">Contactos</div>
-                <div class="value" id="statContacts">0</div>
+            <div class="file-preview" id="filePreview">
+                <div class="file-thumb" id="fileThumb"><i class="fas fa-file"></i></div>
+                <div class="file-info">
+                    <div class="file-name" id="fileName">archivo.jpg</div>
+                    <div class="file-size" id="fileSize">0 KB</div>
+                </div>
+                <button class="file-cancel" id="fileCancel"><i class="fas fa-times"></i></button>
             </div>
-            <div class="stat-card">
-                <div class="label">Mensajes</div>
-                <div class="value" id="statMessages">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Estado</div>
-                <div class="value" id="statStatus" style="font-size:14px;">-</div>
-            </div>
-            <div class="predefined-panel" id="predefinedPanel">
-                <h3><i class="fas fa-bolt"></i> Textos Rapidos</h3>
-                <div id="predefinedList"></div>
-            </div>
-            <div class="logs-container">
-                <h3><i class="fas fa-terminal"></i> Logs</h3>
-                <div id="logsContent" style="max-height:200px;overflow-y:auto;"></div>
+            <input type="file" id="fileInput" accept="image/*,audio/*,video/*" />
+
+            <div class="composer">
+                <input class="input-phone" id="phoneInput" type="text" placeholder="Número destino" />
+                <input class="input-msg" id="msgInput" type="text" placeholder="Escribe un mensaje manual..." />
+                <div class="send-group">
+                    <button class="tool-btn action-btn" id="toggleBotBtn" title="Pausar/Reanudar IA"><i class="fas fa-robot"></i></button>
+                    <button class="tool-btn action-btn" id="draftBtn" title="Respuesta con IA"><i class="fas fa-robot"></i></button>
+                    <button class="tool-btn action-btn" id="toggleReadBtn" title="Marcar leído/no leído"><i class="fas fa-envelope-open-text"></i></button>
+                    <button class="tool-btn action-btn danger" id="deleteChatBtn" title="Borrar chat"><i class="fas fa-trash-alt"></i></button>
+                    <div class="separator"></div>
+                    <button class="tool-btn" id="attachBtn" title="Adjuntar"><i class="fas fa-paperclip"></i></button>
+                    <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i> Enviar</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="right-panel">
+        <div class="panel-section" style="flex: 1;">
+            <div class="panel-section-header">
+                <h3><i class="fas fa-comment-dots"></i> Textos predefinidos <span class="hint">click para usar</span></h3>
+                <button class="add-btn" id="addTextBtn"><i class="fas fa-plus"></i> Añadir</button>
+            </div>
+            <div class="predefined-list" id="predefinedList"></div>
+        </div>
+    </div>
+</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
+<div class="modal-overlay" id="textModal">
+    <div class="modal">
+        <h3 id="textModalTitle">Añadir texto predefinido</h3>
+        <input type="text" id="textEmoji" placeholder="Emoji (ej: 👋)" />
+        <input type="text" id="textTag" placeholder="Etiqueta (ej: Saludo)" />
+        <textarea id="textContent" rows="3" placeholder="Texto del mensaje..."></textarea>
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancelTextBtn">Cancelar</button>
+            <button class="btn-primary" id="saveTextBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="contactModal">
+    <div class="modal">
+        <h3 id="contactModalTitle">Guardar contacto</h3>
+        <input type="text" id="contactName" placeholder="Nombre del contacto" />
+        <input type="text" id="contactNumber" placeholder="Número (ej: 573001234567)" />
+        <input type="text" id="contactNotes" placeholder="Notas (opcional)" />
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancelContactBtn">Cancelar</button>
+            <button class="btn-primary" id="saveContactBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay notes-modal" id="notesModal">
+    <div class="modal">
+        <h3><i class="fas fa-sticky-note"></i> Nota del contacto</h3>
+        <textarea id="notesInput" rows="3" placeholder="Escribe una nota para este contacto..."></textarea>
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancelNotesBtn">Cancelar</button>
+            <button class="btn-primary" id="saveNotesBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Contacts Sidebar -->
+<div class="contacts-sidebar-overlay" id="contactsSidebar">
+    <div class="contacts-sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-bars"></i> Menú</h3>
+            <button class="sidebar-close" id="closeSidebar">&times;</button>
+        </div>
+        <div class="sidebar-nav">
+            <button class="sidebar-nav-item active" data-tab="contacts">
+                <i class="fas fa-users"></i> Contactos
+            </button>
+            <button class="sidebar-nav-item" data-tab="calls">
+                <i class="fas fa-phone"></i> Llamadas
+            </button>
+            <button class="sidebar-nav-item" data-tab="config">
+                <i class="fas fa-cog"></i> Config
+            </button>
+        </div>
+        <div class="sidebar-tab-content" id="tab-contacts">
+            <div class="sidebar-search">
+                <i class="fas fa-search"></i>
+                <input id="sidebarSearch" type="text" placeholder="Buscar contacto..." />
+            </div>
+            <div class="sidebar-list" id="sidebarContactList"></div>
+        </div>
+        <div class="sidebar-tab-content" id="tab-calls" style="display: none;">
+            <div class="call-log-header">
+                <h4><i class="fas fa-history"></i> Llamadas rechazadas</h4>
+                <button class="call-log-clear-btn" id="clearCallLogBtn">Limpiar</button>
+            </div>
+            <div class="sidebar-list" id="callLogList"></div>
+        </div>
+        <div class="sidebar-tab-content" id="tab-config" style="display: none;">
+            <div class="config-section">
+                <h4><i class="fas fa-phone-slash"></i> Rechazo de llamadas</h4>
+                <div class="config-toggle-row">
+                    <label>Activar rechazo automático</label>
+                    <label class="config-toggle">
+                        <input type="checkbox" id="callsEnabled" checked>
+                        <span class="config-toggle-slider"></span>
+                    </label>
+                </div>
+                <h4><i class="fas fa-comment"></i> Mensaje para llamadas de voz</h4>
+                <textarea class="config-textarea" id="voiceMessage" rows="3" placeholder="Mensaje automático para llamadas de voz..."></textarea>
+                <h4><i class="fas fa-video"></i> Mensaje para videollamadas</h4>
+                <textarea class="config-textarea" id="videoMessage" rows="3" placeholder="Mensaje automático para videollamadas..."></textarea>
+                <button class="config-save-btn" id="saveCallsConfig">Guardar configuración</button>
+                <div id="configSuccess" style="display: none;"></div>
+
+                <h4 style="margin-top:18px;"><i class="fas fa-robot"></i> Configuración del Bot</h4>
+                <div class="config-toggle-row">
+                    <label>Bot habilitado globalmente</label>
+                    <label class="config-toggle">
+                        <input type="checkbox" id="botEnabledGlobal" checked>
+                        <span class="config-toggle-slider"></span>
+                    </label>
+                </div>
+                <h4><i class="fas fa-brain"></i> Modelo IA</h4>
+                <select class="config-textarea" id="botModel" style="min-height:auto; padding:10px 14px; appearance:auto;">
+                    <option value="mistral-tiny">Mistral Tiny (rápido)</option>
+                    <option value="mistral-small">Mistral Small (balance)</option>
+                    <option value="mistral-medium">Mistral Medium (calidad)</option>
+                </select>
+                <h4><i class="fas fa-text-height"></i> Max tokens respuesta</h4>
+                <input class="config-textarea" id="botMaxTokens" type="number" value="250" min="50" max="1000" style="min-height:auto;" />
+                <button class="config-save-btn" id="saveBotConfig" style="margin-top:10px;">Guardar bot</button>
+                <div id="botConfigSuccess" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    (function() {
         const socket = io();
+        const statusText = document.getElementById('statusText');
+        const contactSearch = document.getElementById('contactSearch');
+        const contactGrid = document.getElementById('contactGrid');
+        const messagesBox = document.getElementById('messagesBox');
+        const phoneInput = document.getElementById('phoneInput');
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const toggleBotBtn = document.getElementById('toggleBotBtn');
+        const draftBtn = document.getElementById('draftBtn');
+        const deleteChatBtn = document.getElementById('deleteChatBtn');
+        const draftPanel = document.getElementById('draftPanel');
+        const closeDraftBtn = document.getElementById('closeDraftBtn');
+        const draftUserMsg = document.getElementById('draftUserMsg');
+        const draftText = document.getElementById('draftText');
+        const sendDraftBtn = document.getElementById('sendDraftBtn');
+        const cancelDraftBtn = document.getElementById('cancelDraftBtn');
+        const predefinedList = document.getElementById('predefinedList');
+        const addTextBtn = document.getElementById('addTextBtn');
+        const addContactBtn = document.getElementById('addContactBtn');
+        const textModal = document.getElementById('textModal');
+        const contactModal = document.getElementById('contactModal');
+        const notesModal = document.getElementById('notesModal');
+
         let contacts = [];
         let conversations = {};
-        let selectedNumber = null;
-        let isConnected = false;
-        let currentBotEnabled = true;
+        let selectedNumber = '';
         let predefinedTexts = [];
+        let savedContacts = [];
+        let editingTextId = null;
+        let editingContactId = null;
 
-        function timeAgo(ts) {
+        function normalizeNumber(value) {
+            const raw = String(value || '').trim();
+            if (raw.includes('@')) return raw.replace('@c.us', '');
+            return raw.replace(/\D/g, '').replace(/^00/, '');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/[&<>"']/g, (m) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                '"': '&quot;', "'": '&#039;'
+            }[m]));
+        }
+
+        function formatTime(ts) {
             if (!ts) return '';
-            const diff = Date.now() - new Date(ts).getTime();
-            const min = Math.floor(diff / 60000);
-            if (min < 1) return 'ahora';
-            if (min < 60) return min + 'm';
-            const hr = Math.floor(min / 60);
-            if (hr < 24) return hr + 'h';
-            return Math.floor(hr / 24) + 'd';
+            try { return new Date(ts).toLocaleString(); } catch { return ''; }
         }
 
-        function toast(msg, type = 'success') {
-            const el = document.getElementById('toast');
-            el.textContent = msg;
-            el.className = 'toast show ' + type;
-            setTimeout(() => el.className = 'toast', 3000);
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.substring(0, 2).toUpperCase();
         }
 
-        function getAvatarColor(name) {
+        function getContactColor(name, number) {
             const colors = [
-                'linear-gradient(135deg, #00d4ff, #00ff88)',
-                'linear-gradient(135deg, #f472b6, #ec4899)',
-                'linear-gradient(135deg, #a78bfa, #8b5cf6)',
-                'linear-gradient(135deg, #fb923c, #f97316)',
-                'linear-gradient(135deg, #34d399, #10b981)',
-                'linear-gradient(135deg, #60a5fa, #3b82f6)',
-                'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                'linear-gradient(135deg, #f87171, #ef4444)',
+                ['#00d4ff', '#00ff88'],
+                ['#f43e5e', '#f97316'],
+                ['#a855f7', '#6366f1'],
+                ['#10b981', '#06b6d4'],
+                ['#f59e0b', '#ef4444'],
+                ['#ec4899', '#8b5cf6'],
+                ['#14b8a6', '#3b82f6'],
+                ['#f472b6', '#fb923c'],
+                ['#84cc16', '#22d3ee'],
+                ['#e879f9', '#818cf8'],
+                ['#34d399', '#fbbf24'],
+                ['#f87171', '#c084fc']
             ];
             let hash = 0;
-            for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return colors[Math.abs(hash) % colors.length];
+            const str = (name || '') + (number || '');
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % colors.length;
+            return colors[index];
+        }
+
+        function getContact(number) {
+            return contacts.find(c => normalizeNumber(c.number) === normalizeNumber(number));
         }
 
         function renderContacts() {
-            const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
-            const filtered = contacts.filter(c => {
-                if (!search) return true;
-                return (c.name || '').toLowerCase().includes(search) || (c.number || '').includes(search);
+            const query = contactSearch.value.trim().toLowerCase();
+            contactGrid.innerHTML = '';
+
+            // Render active contacts
+            const filteredActive = contacts.filter(c => {
+                const text = `${c.name || ''} ${c.number || ''} ${c.lastMessage || ''} ${c.notes || ''}`.toLowerCase();
+                return text.includes(query);
             });
 
-            const list = document.getElementById('contactList');
-            list.innerHTML = filtered.map(c => {
-                const initials = (c.name || c.number || '?').slice(0, 2).toUpperCase();
-                const active = c.number === selectedNumber ? ' active' : '';
-                const unread = c.unreadCount > 0 ? `<div class="unread-badge">${c.unreadCount}</div>` : '';
-                const bg = getAvatarColor(c.name || c.number);
-                const botBadge = c.botEnabled === false
-                    ? '<span class="badge badge-paused">PAUSA</span>'
-                    : '<span class="badge badge-ai">IA</span>';
-                return `<div class="contact-item${active}" onclick="selectContact('${c.number}')">
-                    <div class="contact-avatar" style="background:${bg}">${initials}</div>
-                    <div class="contact-info">
-                        <div class="contact-name">${c.name || c.number} ${botBadge}</div>
-                        <div class="contact-msg">${(c.lastMessage || '').replace(/\n/g, ' ')}</div>
-                    </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                        <div class="contact-time">${timeAgo(c.lastInteraction)}</div>
-                        ${unread}
-                    </div>
-                </div>`;
-            }).join('');
-            document.getElementById('contactCount').textContent = filtered.length;
-            document.getElementById('statContacts').textContent = contacts.length;
-        }
+            filteredActive.forEach(contact => {
+                const number = normalizeNumber(contact.number);
+                const displayName = contact.name || number;
+                const isActive = number === selectedNumber;
+                const botPaused = contact.botEnabled === false;
+                const unread = contact.unreadCount || 0;
+                const notes = contact.notes || '';
+                const colors = getContactColor(displayName, number);
+                const hasNote = notes.length > 0;
 
-        function filterContacts() { renderContacts(); }
+                const card = document.createElement('div');
+                card.className = `contact-card${isActive ? ' active' : ''}${unread > 0 ? ' unread' : ''}`;
+                card.style.position = 'relative';
+                card.innerHTML = `
+                    <div class="avatar-mini" style="background: linear-gradient(135deg, ${colors[0]}, ${colors[1]});">${getInitials(displayName)}</div>
+                    <div class="info-mini">
+                        <div class="name-mini">${escapeHtml(displayName)}</div>
+                        <div class="number-mini">${escapeHtml(number)}</div>
+                    </div>
+                    ${hasNote ? `<div class="notes-mini">${escapeHtml(notes)}</div>` : ''}
+                    ${unread > 0 ? `<div class="unread-mini">${unread}</div>` : ''}
+                    <span class="badge-mini${botPaused ? ' paused' : ''}">${botPaused ? 'PAUSA' : 'IA'}</span>
+                    <button class="note-btn${hasNote ? ' has-note' : ''}" title="${hasNote ? 'Editar nota' : 'Agregar nota'}"><i class="fas fa-sticky-note"></i></button>
+                `;
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.note-btn')) return;
+                    selectContact(number, contact.name || number);
+                });
+                card.querySelector('.note-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openNotesModal(number, displayName, notes);
+                });
+                contactGrid.appendChild(card);
+            });
 
-        function selectContact(number) {
-            selectedNumber = number;
-            const contact = contacts.find(c => c.number === number);
-            currentBotEnabled = contact ? contact.botEnabled !== false : true;
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('qrContainer').style.display = 'none';
-            document.getElementById('chatView').style.display = 'flex';
-            document.getElementById('chatName').textContent = contact ? contact.name : number;
-            document.getElementById('chatNumber').textContent = number;
-            updateBotButton();
-            renderMessages();
-            renderContacts();
-            // Close sidebar on mobile
-            if (window.innerWidth <= 700) {
-                document.getElementById('sidebar').classList.remove('show-mobile');
-                document.getElementById('sidebarOverlay').classList.remove('show-mobile');
+            // Render saved contacts
+            const filteredSaved = savedContacts.filter(c => {
+                const text = `${c.name || ''} ${c.number || ''} ${c.notes || ''}`.toLowerCase();
+                return text.includes(query);
+            });
+
+            filteredSaved.forEach(contact => {
+                const number = normalizeNumber(contact.number);
+                const displayName = contact.name || number;
+                const isActive = number === selectedNumber;
+                const notes = contact.notes || '';
+                const colors = getContactColor(displayName, number);
+                const hasNote = notes.length > 0;
+
+                const card = document.createElement('div');
+                card.className = `contact-card saved${isActive ? ' active' : ''}`;
+                card.innerHTML = `
+                    <div class="avatar-mini" style="background: linear-gradient(135deg, ${colors[0]}, ${colors[1]});">${getInitials(displayName)}</div>
+                    <div class="info-mini">
+                        <div class="name-mini">${escapeHtml(displayName)}</div>
+                        <div class="number-mini">${escapeHtml(number)}</div>
+                    </div>
+                    ${hasNote ? `<div class="notes-mini">${escapeHtml(notes)}</div>` : ''}
+                    <span class="badge-mini saved-badge">GUARDADO</span>
+                    <div class="saved-actions">
+                        <button class="action-btn note-btn-saved${hasNote ? ' has-note' : ''}" title="${hasNote ? 'Editar nota' : 'Agregar nota'}"><i class="fas fa-sticky-note"></i></button>
+                        <button class="action-btn edit-btn" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete-btn" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.action-btn')) return;
+                    selectContact(number, contact.name || number);
+                });
+                card.querySelector('.note-btn-saved').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openNotesModal(number, displayName, notes);
+                });
+                card.querySelector('.edit-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openContactModal(contact);
+                });
+                card.querySelector('.delete-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSavedContact(contact.id);
+                });
+                contactGrid.appendChild(card);
+            });
+
+            if (filteredActive.length === 0 && filteredSaved.length === 0) {
+                contactGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; color: #4b5a6e; font-size: 13px; padding: 10px 0;">
+                        <i class="fas fa-users" style="display: block; margin-bottom: 4px;"></i>
+                        No hay contactos
+                    </div>
+                `;
+                return;
             }
         }
 
-        function updateBotButton() {
-            const btn = document.getElementById('btnToggleBot');
-            if (currentBotEnabled) {
-                btn.className = '';
-                btn.innerHTML = '<i class="fas fa-robot"></i> IA';
-            } else {
-                btn.className = 'active-toggle';
-                btn.innerHTML = '<i class="fas fa-robot"></i> PAUSA';
-            }
-        }
+        function renderConversation() {
+            const contact = getContact(selectedNumber);
+            const displayName = contact ? contact.name || selectedNumber : selectedNumber || 'Sin contacto';
 
-        function renderMessages() {
-            if (!selectedNumber) return;
+            const botPaused = contact ? contact.botEnabled === false : false;
+            toggleBotBtn.innerHTML = botPaused
+                ? '<i class="fas fa-play"></i>'
+                : '<i class="fas fa-pause"></i>';
+
+            messagesBox.innerHTML = '';
+
+            if (!selectedNumber) {
+                messagesBox.innerHTML = `
+                    <div class="empty-chat">
+                        <i class="fas fa-comment-dots"></i>
+                        <p>Selecciona un contacto para ver la conversación</p>
+                    </div>
+                `;
+                return;
+            }
+
             const msgs = conversations[selectedNumber] || [];
-            const container = document.getElementById('chatMessages');
-            const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-
-            container.innerHTML = msgs.map(m => {
-                let cls = 'manual';
-                if (m.type === 'incoming') cls = 'incoming';
-                else if (m.type === 'ai-reply') cls = 'ai-reply';
-                else if (m.type === 'operator-ai') cls = 'operator-ai';
-                else if (m.type === 'error') cls = 'error';
-                else if (m.type === 'system') cls = 'system';
-                const time = new Date(m.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                return `<div class="msg ${cls}">
-                    <div class="msg-sender">${m.from}</div>
-                    <div>${escapeHtml(m.body)}</div>
-                    <div class="msg-time">${time}</div>
-                </div>`;
-            }).join('');
-
-            if (wasAtBottom || msgs.length <= 3) {
-                requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+            if (msgs.length === 0) {
+                messagesBox.innerHTML = `
+                    <div class="empty-chat" style="padding: 30px 0;">
+                        <i class="fas fa-inbox" style="font-size: 28px;"></i>
+                        <p>No hay mensajes aún</p>
+                    </div>
+                `;
+                return;
             }
-            document.getElementById('statMessages').textContent = msgs.length;
 
-            const lastIncoming = [...msgs].reverse().find(m => m.type === 'incoming');
-            if (lastIncoming) {
-                document.getElementById('draftLastMsg').textContent = lastIncoming.body;
+            msgs.forEach(msg => {
+                const div = document.createElement('div');
+                let typeClass = 'incoming';
+                if (msg.type === 'outgoing' || msg.type === 'manual') typeClass = 'outgoing';
+                else if (msg.type === 'ai-reply') typeClass = 'ai-reply';
+                else if (msg.type === 'system') typeClass = 'system';
+                else if (msg.type === 'operator-ai') typeClass = 'operator-ai';
+                else if (msg.type === 'error') typeClass = 'error';
+
+                div.className = `msg ${typeClass}`;
+
+                let fromLabel = 'Recibido';
+                if (msg.type === 'outgoing' || msg.type === 'manual') fromLabel = 'Enviado';
+                else if (msg.type === 'ai-reply') fromLabel = 'IA';
+                else if (msg.type === 'system') fromLabel = 'Sistema';
+                else if (msg.type === 'operator-ai') fromLabel = 'Operador + IA';
+
+                div.innerHTML = `
+                    <div class="meta">
+                        <span class="from">${fromLabel}</span>
+                        <span class="time">${formatTime(msg.timestamp)}</span>
+                    </div>
+                    <div>${escapeHtml(msg.body)}</div>
+                `;
+                messagesBox.appendChild(div);
+            });
+
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        }
+
+        function selectContact(number, name = '') {
+            selectedNumber = normalizeNumber(number);
+            phoneInput.value = selectedNumber;
+            renderContacts();
+            renderConversation();
+            msgInput.focus();
+        }
+
+        function sendManualMessage() {
+            const number = normalizeNumber(phoneInput.value || selectedNumber);
+            const message = msgInput.value.trim();
+
+            if (pendingFile) {
+                sendPendingFile();
+                if (message) {
+                    const contact = getContact(number);
+                    socket.emit('send-message', {
+                        number,
+                        message,
+                        name: contact ? contact.name || number : number
+                    });
+                }
+                msgInput.value = '';
+                return;
             }
-        }
 
-        function escapeHtml(t) {
-            const d = document.createElement('div');
-            d.textContent = t || '';
-            return d.innerHTML;
-        }
+            if (!number || !message) return;
 
-        function sendMessage() {
-            if (!selectedNumber || !isConnected) return;
-            const input = document.getElementById('messageInput');
-            const msg = input.value.trim();
-            if (!msg) return;
-            socket.emit('send-message', { number: selectedNumber, message: msg });
-            input.value = '';
-        }
-
-        function toggleBot() {
-            if (!selectedNumber) return;
-            currentBotEnabled = !currentBotEnabled;
-            socket.emit('set-bot-enabled', { number: selectedNumber, enabled: currentBotEnabled });
-            updateBotButton();
-            toast(currentBotEnabled ? 'IA activada para este contacto' : 'IA pausada para este contacto');
-        }
-
-        function toggleDraft() {
-            const panel = document.getElementById('draftPanel');
-            panel.classList.toggle('show');
-            if (panel.classList.contains('show')) {
-                document.getElementById('draftInput').focus();
-            }
-        }
-
-        function sendDraft() {
-            if (!selectedNumber) return;
-            const draft = document.getElementById('draftInput').value.trim();
-            if (!draft) return;
-            socket.emit('submit-operator-draft', { number: selectedNumber, draft });
-            document.getElementById('draftInput').value = '';
-            toggleDraft();
-            toast('Borrador enviado a la IA para refinar');
+            const contact = getContact(number);
+            socket.emit('send-message', {
+                number,
+                message,
+                name: contact ? contact.name || number : number
+            });
+            msgInput.value = '';
         }
 
         function deleteChat() {
             if (!selectedNumber) return;
-            if (!confirm('Eliminar este chat?')) return;
+            if (!confirm('¿Borrar este chat?')) return;
             socket.emit('delete-chat', { number: selectedNumber });
-            selectedNumber = null;
-            document.getElementById('chatView').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'flex';
-            toast('Chat eliminado');
+            selectedNumber = '';
+            phoneInput.value = '';
+            renderContacts();
+            renderConversation();
         }
 
-        function renderPredefinedTexts() {
-            const list = document.getElementById('predefinedList');
-            list.innerHTML = predefinedTexts.map(t => {
-                return `<div class="predefined-item" onclick="insertPredefined('${t.text.replace(/'/g, "\\'")}')">
-                    <div class="pd-text">${t.emoji || ''} ${escapeHtml((t.text || '').substring(0, 80))}</div>
-                    ${t.tag ? `<div class="pd-tag">${t.tag}</div>` : ''}
-                </div>`;
-            }).join('');
-        }
-
-        function insertPredefined(text) {
-            const input = document.getElementById('messageInput');
-            input.value = text;
-            input.focus();
-        }
-
-        document.getElementById('messageInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        // Socket.IO events
-        socket.on('connect', () => { console.log('Conectado al servidor'); });
-
-        socket.on('status', (s) => {
-            const badge = document.getElementById('statusBadge');
-            const text = document.getElementById('statusText');
-            document.getElementById('statStatus').textContent = s;
-            isConnected = s === 'ready' || s === 'WhatsApp conectado';
-            document.getElementById('btnSend').disabled = !isConnected;
-
-            if (isConnected) {
-                badge.className = 'status-badge connected';
-                text.textContent = 'WhatsApp Conectado';
-                document.getElementById('qrContainer').style.display = 'none';
-                stopQrCountdown();
-                if (!selectedNumber) document.getElementById('emptyState').style.display = 'flex';
-            } else if (s === 'qr' || s.includes('QR') || s.includes('Escanea')) {
-                badge.className = 'status-badge';
-                text.textContent = 'Esperando QR';
-                document.getElementById('qrContainer').style.display = 'flex';
-                document.getElementById('emptyState').style.display = 'none';
-            } else if (s === 'reconnecting' || s.includes('Reconectando')) {
-                badge.className = 'status-badge';
-                text.textContent = s.includes('(') ? s : 'Reconectando...';
-            } else {
-                badge.className = 'status-badge';
-                text.textContent = s || 'Iniciando...';
+        function openDraft() {
+            if (!selectedNumber) return;
+            const msgs = conversations[selectedNumber] || [];
+            const lastUserMsg = msgs.filter(m => m.type === 'incoming').pop();
+            if (!lastUserMsg) {
+                const div = document.createElement('div');
+                div.className = 'msg system';
+                div.textContent = 'No hay mensajes del usuario para responder.';
+                messagesBox.appendChild(div);
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+                return;
             }
+
+            draftUserMsg.textContent = lastUserMsg.body;
+            draftText.value = '';
+            draftPanel.classList.add('open');
+            draftText.focus();
+        }
+
+        function closeDraft() {
+            draftPanel.classList.remove('open');
+        }
+
+        function openDraftWithText(text) {
+            if (!selectedNumber) {
+                const div = document.createElement('div');
+                div.className = 'msg system';
+                div.textContent = 'Selecciona un contacto primero.';
+                messagesBox.appendChild(div);
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+                return;
+            }
+            draftUserMsg.textContent = 'Texto predefinido para enviar a la IA';
+            draftText.value = text;
+            draftPanel.classList.add('open');
+            draftText.focus();
+        }
+
+        function sendDraft() {
+            const text = draftText.value.trim();
+            if (!text || !selectedNumber) return;
+
+            const msgs = conversations[selectedNumber] || [];
+            const lastUserMsg = msgs.filter(m => m.type === 'incoming').pop();
+
+            socket.emit('submit-operator-draft', {
+                number: selectedNumber,
+                operatorDraft: text,
+                userMessage: lastUserMsg ? lastUserMsg.body : '',
+                name: getContact(selectedNumber)?.name || selectedNumber
+            });
+
+            closeDraft();
+            const div = document.createElement('div');
+            div.className = 'msg system';
+            div.textContent = 'Enviando a la IA para refinar...';
+            messagesBox.appendChild(div);
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        }
+
+        function mergeMessage(msg) {
+            if (!msg.number) return;
+            const key = normalizeNumber(msg.number);
+            if (!conversations[key]) conversations[key] = [];
+
+            const exists = conversations[key].some(item => item.id && item.id === msg.id);
+            if (!exists) {
+                conversations[key].push(msg);
+            }
+
+            if (selectedNumber === key) {
+                renderConversation();
+            }
+            renderContacts();
+        }
+
+        async function loadPredefinedTexts() {
+            try {
+                const res = await fetch('/api/predefined-texts');
+                predefinedTexts = await res.json();
+                renderPredefined();
+            } catch (err) {
+                console.error('Error cargando textos:', err);
+            }
+        }
+
+        function renderPredefined() {
+            predefinedList.innerHTML = '';
+            predefinedTexts.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'predefined-item';
+                div.innerHTML = `
+                    <span class="item-number">${index + 1}</span>
+                    <span class="emoji">${item.emoji}</span>
+                    <span class="text-preview">${escapeHtml(item.text)}</span>
+                    <span class="badge-tag">${item.tag}</span>
+                    <div class="item-actions">
+                        <button class="item-action-btn ai-btn" title="Enviar a IA"><i class="fas fa-robot"></i></button>
+                        <button class="item-action-btn copy-btn" title="Copiar"><i class="fas fa-copy"></i></button>
+                        <button class="item-action-btn edit-btn" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="item-action-btn delete" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="tooltip">${escapeHtml(item.text)}</div>
+                `;
+                div.addEventListener('click', (e) => {
+                    if (e.target.closest('.item-action-btn')) return;
+                    msgInput.value = item.text;
+                    msgInput.focus();
+                });
+                div.querySelector('.ai-btn').addEventListener('click', () => openDraftWithText(item.text));
+                div.querySelector('.copy-btn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(item.text);
+                });
+                div.querySelector('.edit-btn').addEventListener('click', () => openTextModal(item));
+                div.querySelector('.delete').addEventListener('click', () => deletePredefinedText(item.id));
+                predefinedList.appendChild(div);
+            });
+        }
+
+        async function savePredefinedText(textData) {
+            try {
+                const url = editingTextId ? `/api/predefined-texts/${editingTextId}` : '/api/predefined-texts';
+                const method = editingTextId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(textData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await loadPredefinedTexts();
+                    closeTextModal();
+                }
+            } catch (err) {
+                console.error('Error guardando texto:', err);
+            }
+        }
+
+        async function deletePredefinedText(id) {
+            if (!confirm('¿Eliminar este texto?')) return;
+            try {
+                await fetch(`/api/predefined-texts/${id}`, { method: 'DELETE' });
+                await loadPredefinedTexts();
+            } catch (err) {
+                console.error('Error eliminando texto:', err);
+            }
+        }
+
+        function openTextModal(item = null) {
+            editingTextId = item ? item.id : null;
+            document.getElementById('textModalTitle').textContent = item ? 'Editar texto' : 'Añadir texto predefinido';
+            document.getElementById('textEmoji').value = item ? item.emoji : '';
+            document.getElementById('textTag').value = item ? item.tag : '';
+            document.getElementById('textContent').value = item ? item.text : '';
+            textModal.classList.add('open');
+        }
+
+        function closeTextModal() {
+            textModal.classList.remove('open');
+            editingTextId = null;
+            document.getElementById('textEmoji').value = '';
+            document.getElementById('textTag').value = '';
+            document.getElementById('textContent').value = '';
+        }
+
+        async function loadSavedContacts() {
+            try {
+                const res = await fetch('/api/saved-contacts');
+                savedContacts = await res.json();
+                renderSavedContacts();
+            } catch (err) {
+                console.error('Error cargando contactos:', err);
+            }
+        }
+
+        function renderSavedContacts() {
+            renderContacts();
+        }
+
+        async function saveSavedContact(contactData) {
+            try {
+                const url = editingContactId ? `/api/saved-contacts/${editingContactId}` : '/api/saved-contacts';
+                const method = editingContactId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(contactData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await loadSavedContacts();
+                    closeContactModal();
+                }
+            } catch (err) {
+                console.error('Error guardando contacto:', err);
+            }
+        }
+
+        async function deleteSavedContact(id) {
+            if (!confirm('¿Eliminar este contacto guardado?')) return;
+            try {
+                await fetch(`/api/saved-contacts/${id}`, { method: 'DELETE' });
+                await loadSavedContacts();
+            } catch (err) {
+                console.error('Error eliminando contacto:', err);
+            }
+        }
+
+        function openContactModal(contact = null) {
+            editingContactId = contact ? contact.id : null;
+            document.getElementById('contactModalTitle').textContent = contact ? 'Editar contacto' : 'Guardar contacto';
+            document.getElementById('contactName').value = contact ? contact.name : '';
+            document.getElementById('contactNumber').value = contact ? contact.number : '';
+            document.getElementById('contactNotes').value = contact ? (contact.notes || '') : '';
+            contactModal.classList.add('open');
+        }
+
+        function closeContactModal() {
+            contactModal.classList.remove('open');
+            editingContactId = null;
+        }
+
+        let editingNotesNumber = null;
+
+        function openNotesModal(number, name, notes) {
+            editingNotesNumber = number;
+            document.getElementById('notesInput').value = notes || '';
+            document.querySelector('#notesModal .modal h3').innerHTML = `<i class="fas fa-sticky-note"></i> Nota - ${escapeHtml(name)}`;
+            notesModal.classList.add('open');
+        }
+
+        function closeNotesModal() {
+            notesModal.classList.remove('open');
+            editingNotesNumber = null;
+        }
+
+        document.getElementById('saveNotesBtn').addEventListener('click', () => {
+            const notes = document.getElementById('notesInput').value.trim();
+            socket.emit('update-contact-notes', { number: editingNotesNumber, notes });
+            closeNotesModal();
         });
 
-        socket.on('qr-code', (url) => {
-            if (url) {
-                document.getElementById('qrImage').src = url;
-                document.getElementById('qrContainer').style.display = 'flex';
-                document.getElementById('emptyState').style.display = 'none';
-                startQrCountdown();
+        document.getElementById('cancelNotesBtn').addEventListener('click', () => {
+            closeNotesModal();
+        });
+
+        socket.on('status', (text) => {
+            statusText.textContent = text || 'Conectado';
+            const badge = document.getElementById('statusBadge');
+            badge.className = 'status-badge';
+            const t = (text || '').toLowerCase();
+            if (t.includes('conectado') || t.includes('ready') || t === 'online') {
+                badge.classList.add('connected');
+            } else if (t.includes('qr') || t.includes('escanea')) {
+                badge.classList.add('qr');
+            } else if (t.includes('desconect') || t.includes('cerrado') || t.includes('error')) {
+                badge.classList.add('disconnected');
             } else {
-                document.getElementById('qrContainer').style.display = 'none';
-                stopQrCountdown();
+                badge.classList.add('connecting');
             }
         });
 
         socket.on('contacts', (data) => {
-            contacts = data;
-            if (selectedNumber) {
-                const c = contacts.find(x => x.number === selectedNumber);
-                if (c) currentBotEnabled = c.botEnabled !== false;
-                updateBotButton();
-            }
+            contacts = data || [];
             renderContacts();
         });
 
         socket.on('conversations', (data) => {
-            conversations = data;
-            if (selectedNumber) renderMessages();
+            conversations = data || {};
+            renderConversation();
         });
 
         socket.on('new-message', (msg) => {
-            if (!conversations[msg.number]) conversations[msg.number] = [];
-            conversations[msg.number].push(msg);
-            if (msg.number === selectedNumber) renderMessages();
-            const c = contacts.find(x => x.number === msg.number);
-            if (c) {
-                c.lastMessage = msg.body;
-                c.lastInteraction = msg.timestamp;
-                if (msg.type === 'incoming' && msg.number !== selectedNumber) {
-                    c.unreadCount = (c.unreadCount || 0) + 1;
+            mergeMessage(msg);
+        });
+
+        socket.on('call-logged', (entry) => {
+            const callsTab = document.getElementById('tab-calls');
+            if (callsTab && callsTab.style.display !== 'none') {
+                loadCallLog();
+            }
+        });
+
+        socket.on('send-result', (result) => {
+            if (result && result.message) {
+                const div = document.createElement('div');
+                div.className = `msg system${result.success ? '' : ' error'}`;
+                div.textContent = result.success ? result.message : result.message;
+                messagesBox.appendChild(div);
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+            }
+        });
+
+        sendBtn.addEventListener('click', sendManualMessage);
+        msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendManualMessage(); });
+        contactSearch.addEventListener('input', renderContacts);
+
+        toggleBotBtn.addEventListener('click', () => {
+            if (!selectedNumber) return;
+            const contact = getContact(selectedNumber);
+            const current = contact ? contact.botEnabled !== false : true;
+            socket.emit('set-bot-enabled', { number: selectedNumber, enabled: !current });
+        });
+
+        document.getElementById('toggleReadBtn').addEventListener('click', () => {
+            if (!selectedNumber) return;
+            socket.emit('toggle-read-status', { number: selectedNumber });
+        });
+
+        draftBtn.addEventListener('click', openDraft);
+        closeDraftBtn.addEventListener('click', closeDraft);
+        cancelDraftBtn.addEventListener('click', closeDraft);
+        sendDraftBtn.addEventListener('click', sendDraft);
+
+        deleteChatBtn.addEventListener('click', deleteChat);
+
+        // === FILE ATTACHMENT LOGIC ===
+        const fileInput = document.getElementById('fileInput');
+        const filePreview = document.getElementById('filePreview');
+        const fileThumb = document.getElementById('fileThumb');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileCancel = document.getElementById('fileCancel');
+        let pendingFile = null;
+
+        const FILE_ICONS = {
+            'image': 'fa-image',
+            'audio': 'fa-headphones',
+            'video': 'fa-film',
+            'default': 'fa-file'
+        };
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        function getFileCategory(mimetype) {
+            if (mimetype.startsWith('image/')) return 'image';
+            if (mimetype.startsWith('audio/')) return 'audio';
+            if (mimetype.startsWith('video/')) return 'video';
+            return 'default';
+        }
+
+        document.getElementById('attachBtn').addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 16 * 1024 * 1024) {
+                alert('El archivo no puede superar 16 MB');
+                fileInput.value = '';
+                return;
+            }
+
+            pendingFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+
+            const category = getFileCategory(file.type);
+            const iconClass = FILE_ICONS[category] || FILE_ICONS.default;
+
+            if (category === 'image') {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    fileThumb.innerHTML = `<img src="${ev.target.result}" alt="preview" />`;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                fileThumb.innerHTML = `<i class="fas ${iconClass}"></i>`;
+            }
+
+            filePreview.classList.add('active');
+        });
+
+        fileCancel.addEventListener('click', () => {
+            pendingFile = null;
+            fileInput.value = '';
+            filePreview.classList.remove('active');
+            fileThumb.innerHTML = '<i class="fas fa-file"></i>';
+        });
+
+        function sendPendingFile() {
+            if (!pendingFile || !selectedNumber) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64Data = e.target.result.split(',')[1];
+                socket.emit('send-media', {
+                    number: selectedNumber,
+                    base64: base64Data,
+                    mimetype: pendingFile.type,
+                    filename: pendingFile.name
+                });
+
+                pendingFile = null;
+                fileInput.value = '';
+                filePreview.classList.remove('active');
+                fileThumb.innerHTML = '<i class="fas fa-file"></i>';
+            };
+            reader.readAsDataURL(pendingFile);
+        }
+        // === END FILE ATTACHMENT ===
+
+        addTextBtn.addEventListener('click', () => openTextModal());
+        document.getElementById('cancelTextBtn').addEventListener('click', closeTextModal);
+        document.getElementById('saveTextBtn').addEventListener('click', () => {
+            const emoji = document.getElementById('textEmoji').value.trim();
+            const tag = document.getElementById('textTag').value.trim();
+            const text = document.getElementById('textContent').value.trim();
+            if (!text) return;
+            savePredefinedText({ emoji: emoji || '💬', tag: tag || 'Personalizado', text });
+        });
+
+        addContactBtn.addEventListener('click', openContactModal);
+        document.getElementById('cancelContactBtn').addEventListener('click', closeContactModal);
+        document.getElementById('saveContactBtn').addEventListener('click', () => {
+            const name = document.getElementById('contactName').value.trim();
+            const number = document.getElementById('contactNumber').value.trim();
+            const notes = document.getElementById('contactNotes').value.trim();
+            if (!name || !number) return;
+            saveSavedContact({ name, number, notes });
+        });
+
+        textModal.addEventListener('click', (e) => { if (e.target === textModal) closeTextModal(); });
+        contactModal.addEventListener('click', (e) => { if (e.target === contactModal) closeContactModal(); });
+        notesModal.addEventListener('click', (e) => { if (e.target === notesModal) closeNotesModal(); });
+
+        // === CONTACTS SIDEBAR ===
+        const contactsSidebar = document.getElementById('contactsSidebar');
+        const sidebarContactList = document.getElementById('sidebarContactList');
+        const sidebarSearch = document.getElementById('sidebarSearch');
+
+        function openSidebar() {
+            contactsSidebar.classList.add('active');
+            renderSidebarContacts();
+            sidebarSearch.value = '';
+            sidebarSearch.focus();
+        }
+
+        function closeSidebar() {
+            contactsSidebar.classList.remove('active');
+        }
+
+        function renderSidebarContacts(filter = '') {
+            sidebarContactList.innerHTML = '';
+            const query = filter.toLowerCase();
+
+            const allContacts = [];
+
+            contacts.forEach(c => {
+                const number = normalizeNumber(c.number);
+                const displayName = c.name || number;
+                const lastMsg = c.lastMessage || '';
+                const notes = c.notes || '';
+                const unread = c.unreadCount || 0;
+                const botPaused = c.botEnabled === false;
+                const isActive = number === selectedNumber;
+                const isUnread = unread > 0;
+
+                const text = `${displayName} ${number} ${lastMsg} ${notes}`.toLowerCase();
+                if (query && !text.includes(query)) return;
+
+                allContacts.push({
+                    number, displayName, lastMsg, notes, unread,
+                    botPaused, isActive, isUnread,
+                    type: 'active'
+                });
+            });
+
+            savedContacts.forEach(c => {
+                const number = normalizeNumber(c.number);
+                const displayName = c.name || number;
+                const notes = c.notes || '';
+                const isActive = number === selectedNumber;
+
+                const text = `${displayName} ${number} ${notes}`.toLowerCase();
+                if (query && !text.includes(query)) return;
+
+                const exists = allContacts.find(ac => ac.number === number);
+                if (!exists) {
+                    allContacts.push({
+                        number, displayName, lastMsg: notes,
+                        notes, unread: 0, botPaused: false,
+                        isActive, isUnread: false,
+                        type: 'saved'
+                    });
                 }
-                renderContacts();
+            });
+
+            if (allContacts.length === 0) {
+                sidebarContactList.innerHTML = `
+                    <div class="sidebar-empty">
+                        <i class="fas fa-users"></i>
+                        No hay contactos
+                    </div>
+                `;
+                return;
+            }
+
+            allContacts.sort((a, b) => {
+                if (a.isActive && !b.isActive) return -1;
+                if (!a.isActive && b.isActive) return 1;
+                if (a.isUnread && !b.isUnread) return -1;
+                if (!a.isUnread && b.isUnread) return 1;
+                return 0;
+            });
+
+            allContacts.forEach(c => {
+                const item = document.createElement('div');
+                item.className = `sidebar-contact-item${c.isActive ? ' active' : ''}${c.isUnread ? ' unread' : ''}${c.type === 'saved' ? ' saved' : ''}`;
+
+                const colors = getContactColor(c.displayName, c.number);
+                const avatarBg = `background: linear-gradient(135deg, ${colors[0]}, ${colors[1]});`;
+
+                const badgeHtml = c.type === 'saved'
+                    ? `<span class="sidebar-badge saved-badge">GUARDADO</span>`
+                    : c.botPaused
+                        ? `<span class="sidebar-badge paused">PAUSA</span>`
+                        : `<span class="sidebar-badge ia">IA</span>`;
+
+                const unreadHtml = c.isUnread
+                    ? `<div class="sidebar-unread">${c.unread}</div>`
+                    : '';
+
+                item.innerHTML = `
+                    <div class="sidebar-avatar" style="${avatarBg}">${getInitials(c.displayName)}</div>
+                    <div class="sidebar-info">
+                        <div class="sidebar-name">${escapeHtml(c.displayName)}</div>
+                        <div class="sidebar-number">${escapeHtml(c.number)}</div>
+                        ${c.notes ? `<div class="sidebar-notes">${escapeHtml(c.notes)}</div>` : ''}
+                        ${c.lastMsg && c.type === 'active' ? `<div class="sidebar-last-msg">${escapeHtml(c.lastMsg)}</div>` : ''}
+                    </div>
+                    ${badgeHtml}
+                    ${unreadHtml}
+                    <button class="sidebar-note-btn" title="${c.notes ? 'Editar nota' : 'Agregar nota'}"><i class="fas fa-sticky-note"></i></button>
+                `;
+
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.sidebar-note-btn')) return;
+                    selectContact(c.number, c.displayName);
+                    closeSidebar();
+                });
+
+                item.querySelector('.sidebar-note-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openNotesModal(c.number, c.displayName, c.notes || '');
+                });
+
+                sidebarContactList.appendChild(item);
+            });
+        }
+
+        document.querySelector('.contacts-grid-header h3').addEventListener('click', openSidebar);
+        document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
+        contactsSidebar.addEventListener('click', (e) => {
+            if (e.target === contactsSidebar) closeSidebar();
+        });
+        sidebarSearch.addEventListener('input', (e) => {
+            renderSidebarContacts(e.target.value);
+        });
+
+        // === SIDEBAR TABS ===
+        const sidebarNavItems = document.querySelectorAll('.sidebar-nav-item');
+        const sidebarTabs = document.querySelectorAll('.sidebar-tab-content');
+
+        sidebarNavItems.forEach(item => {
+            item.addEventListener('click', () => {
+                sidebarNavItems.forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                const tab = item.dataset.tab;
+                sidebarTabs.forEach(t => t.style.display = 'none');
+                document.getElementById('tab-' + tab).style.display = '';
+                if (tab === 'calls') loadCallLog();
+                if (tab === 'config') { loadCallsConfig(); loadBotConfig(); }
+            });
+        });
+
+        // === CALL LOG ===
+        const callLogList = document.getElementById('callLogList');
+
+        function renderCallLog(log) {
+            callLogList.innerHTML = '';
+            if (!log || log.length === 0) {
+                callLogList.innerHTML = '<div class="call-log-empty"><i class="fas fa-phone-slash"></i>No hay llamadas rechazadas</div>';
+                return;
+            }
+            log.forEach(entry => {
+                const item = document.createElement('div');
+                item.className = 'call-log-item';
+                const iconClass = entry.isVideo ? 'video' : 'voice';
+                const iconName = entry.isVideo ? 'fa-video' : 'fa-phone';
+                const typeName = entry.isVideo ? 'Videollamada' : 'Llamada';
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleDateString('es-CL') + ' ' + date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                item.innerHTML = `
+                    <div class="call-log-icon ${iconClass}"><i class="fas ${iconName}"></i></div>
+                    <div class="call-log-info">
+                        <div class="call-log-number">${escapeHtml(entry.number)}</div>
+                        <div class="call-log-type">${typeName}</div>
+                        <div class="call-log-time">${timeStr}</div>
+                    </div>
+                `;
+                callLogList.appendChild(item);
+            });
+        }
+
+        function loadCallLog() {
+            socket.emit('get-call-log', (log) => {
+                renderCallLog(log);
+            });
+        }
+
+        document.getElementById('clearCallLogBtn').addEventListener('click', () => {
+            socket.emit('clear-call-log', (log) => {
+                renderCallLog(log);
+            });
+        });
+
+        // === CALLS CONFIG ===
+        function loadCallsConfig() {
+            fetch('/api/settings').then(r => r.json()).then(settings => {
+                const calls = settings.calls || {};
+                document.getElementById('callsEnabled').checked = calls.enabled !== false;
+                document.getElementById('voiceMessage').value = calls.voiceMessage || '';
+                document.getElementById('videoMessage').value = calls.videoMessage || '';
+            });
+        }
+
+        document.getElementById('saveCallsConfig').addEventListener('click', () => {
+            const calls = {
+                enabled: document.getElementById('callsEnabled').checked,
+                voiceMessage: document.getElementById('voiceMessage').value.trim(),
+                videoMessage: document.getElementById('videoMessage').value.trim()
+            };
+            fetch('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ calls })
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    const msg = document.getElementById('configSuccess');
+                    msg.textContent = 'Configuración guardada';
+                    msg.className = 'config-success';
+                    msg.style.display = 'block';
+                    setTimeout(() => { msg.style.display = 'none'; }, 2500);
+                }
+            });
+        });
+
+        // === END CONTACTS SIDEBAR ===
+
+        // === QR CODE ===
+        const qrOverlay = document.getElementById('qrOverlay');
+        const qrImage = document.getElementById('qrImage');
+        const qrCountdown = document.getElementById('qrCountdown');
+        const qrExpired = document.getElementById('qrExpired');
+        let qrTimer = null;
+        let qrTimeLeft = 0;
+
+        socket.on('qr-code', (dataUrl) => {
+            if (dataUrl) {
+                qrImage.src = dataUrl;
+                qrOverlay.classList.add('active');
+                qrExpired.style.display = 'none';
+                qrCountdown.style.display = '';
+                startQrCountdown();
+            } else {
+                qrOverlay.classList.remove('active');
+                stopQrCountdown();
             }
         });
-
-        socket.on('send-result', (data) => {
-            if (data.success) toast(data.message, 'success');
-            else toast(data.message, 'error');
-        });
-
-        socket.on('operator-status', (data) => {
-            if (data.number === selectedNumber) {
-                currentBotEnabled = data.botEnabled !== false;
-                updateBotButton();
-            }
-        });
-
-        // Load predefined texts
-        fetch('/api/predefined-texts').then(r => r.json()).then(data => {
-            predefinedTexts = data;
-            renderPredefinedTexts();
-        }).catch(() => {});
-
-        // ===== DISCONNECT / RESTART =====
-        function disconnectWhatsApp() {
-            if (!confirm('Desconectar la sesion WhatsApp? Se borrara la sesion y tendras que escanear el QR de nuevo.')) return;
-            fetch('/api/disconnect', { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    toast(data.message || 'Desconectando...', 'success');
-                })
-                .catch(err => toast('Error: ' + err.message, 'error'));
-        }
-
-        function restartBot() {
-            if (!confirm('Reiniciar el bot? Se desconectara y volvera a conectar automaticamente.')) return;
-            fetch('/api/restart', { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    toast(data.message || 'Reiniciando...', 'success');
-                })
-                .catch(err => toast('Error: ' + err.message, 'error'));
-        }
-
-        // ===== MOBILE SIDEBAR =====
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('show-mobile');
-            overlay.classList.toggle('show-mobile');
-        }
-
-        function goBack() {
-            selectedNumber = null;
-            document.getElementById('chatView').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'flex';
-        }
-
-        // ===== QR COUNTDOWN =====
-        let qrCountdownInterval = null;
-        let qrExpiresAt = 0;
 
         function startQrCountdown() {
             stopQrCountdown();
-            qrExpiresAt = Date.now() + 120000; // 2 minutes
-            qrCountdownInterval = setInterval(() => {
-                const remaining = Math.max(0, Math.ceil((qrExpiresAt - Date.now()) / 1000));
-                const el = document.getElementById('qrCountdown');
-                if (el) {
-                    if (remaining > 0) {
-                        el.textContent = `QR expira en ${remaining}s`;
-                        el.style.color = remaining < 30 ? '#ef4444' : '#7a8a9e';
-                    } else {
-                        el.textContent = 'QR expirado, esperando nuevo...';
-                        el.style.color = '#fbbf24';
-                    }
+            qrTimeLeft = 120;
+            updateQrCountdown();
+            qrTimer = setInterval(() => {
+                qrTimeLeft--;
+                updateQrCountdown();
+                if (qrTimeLeft <= 0) {
+                    stopQrCountdown();
+                    qrCountdown.style.display = 'none';
+                    qrExpired.style.display = '';
                 }
             }, 1000);
         }
 
         function stopQrCountdown() {
-            if (qrCountdownInterval) {
-                clearInterval(qrCountdownInterval);
-                qrCountdownInterval = null;
-            }
+            if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
         }
-    </script>
+
+        function updateQrCountdown() {
+            const m = Math.floor(qrTimeLeft / 60);
+            const s = qrTimeLeft % 60;
+            qrCountdown.textContent = `Expira en ${m}:${s.toString().padStart(2, '0')}`;
+            if (qrTimeLeft <= 30) qrCountdown.style.color = '#ef4444';
+            else qrCountdown.style.color = '#fbbf24';
+        }
+
+        // === DISCONNECT / RESTART ===
+        document.getElementById('disconnectBtn').addEventListener('click', async () => {
+            if (!confirm('¿Desconectar WhatsApp? Se cerrará la sesión actual.')) return;
+            try {
+                const res = await fetch('/api/disconnect', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    const div = document.createElement('div');
+                    div.className = 'msg system';
+                    div.textContent = 'Desconectando WhatsApp...';
+                    messagesBox.appendChild(div);
+                    messagesBox.scrollTop = messagesBox.scrollHeight;
+                }
+            } catch (e) { console.error('Disconnect error:', e); }
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', async () => {
+            if (!confirm('¿Reiniciar el bot?')) return;
+            try {
+                const res = await fetch('/api/restart', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    const div = document.createElement('div');
+                    div.className = 'msg system';
+                    div.textContent = 'Reiniciando bot...';
+                    messagesBox.appendChild(div);
+                    messagesBox.scrollTop = messagesBox.scrollHeight;
+                }
+            } catch (e) { console.error('Restart error:', e); }
+        });
+
+        // === BOT CONFIG ===
+        function loadBotConfig() {
+            fetch('/api/settings').then(r => r.json()).then(settings => {
+                const bot = settings.bot || {};
+                document.getElementById('botEnabledGlobal').checked = bot.enabled !== false;
+                document.getElementById('botModel').value = bot.model || 'mistral-tiny';
+                document.getElementById('botMaxTokens').value = bot.maxTokens || 250;
+            });
+        }
+
+        document.getElementById('saveBotConfig').addEventListener('click', () => {
+            const bot = {
+                enabled: document.getElementById('botEnabledGlobal').checked,
+                model: document.getElementById('botModel').value,
+                maxTokens: parseInt(document.getElementById('botMaxTokens').value) || 250,
+                language: 'es'
+            };
+            fetch('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bot })
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    const msg = document.getElementById('botConfigSuccess');
+                    msg.textContent = 'Bot configurado';
+                    msg.className = 'config-success';
+                    msg.style.display = 'block';
+                    setTimeout(() => { msg.style.display = 'none'; }, 2500);
+                }
+            });
+        });
+
+        // === SIDEBAR HAMBURGER ===
+        document.getElementById('openSidebar').addEventListener('click', openSidebar);
+
+        async function init() {
+            renderContacts();
+            renderConversation();
+            await loadPredefinedTexts();
+            await loadSavedContacts();
+        }
+
+        init();
+
+        console.log('N1 NEXUS VIP Panel iniciado');
+    })();
+</script>
+
 </body>
 </html>
