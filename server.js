@@ -65,16 +65,41 @@ function saveSavedContacts() { saveJSON(SAVED_CONTACTS_PATH, savedContacts); }
 function savePredefinedTexts() { saveJSON(PREDEFINED_TEXTS_PATH, predefinedTexts); }
 function saveSettings() { saveJSON(SETTINGS_PATH, settings); }
 
-// ===== CONVERSATION HISTORY =====
+// ===== AI HISTORY (separate from conversations for Mistral context) =====
+const aiHistory = {};
+
 function addToHistory(number, role, body) {
-  if (!conversations[number]) conversations[number] = [];
-  conversations[number].push({ role, body, ts: new Date().toISOString() });
-  if (conversations[number].length > 50) conversations[number] = conversations[number].slice(-50);
-  saveConversations();
+  if (!aiHistory[number]) aiHistory[number] = [];
+  aiHistory[number].push({ role, body, ts: new Date().toISOString() });
+  if (aiHistory[number].length > 50) aiHistory[number] = aiHistory[number].slice(-50);
 }
 
 function getHistory(number, lastN = 5) {
-  return (conversations[number] || []).slice(-lastN);
+  return (aiHistory[number] || []).slice(-lastN);
+}
+
+// ===== MIGRATE OLD MESSAGES =====
+function migrateOldMessages() {
+  let migrated = 0;
+  for (const [number, msgs] of Object.entries(conversations)) {
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i];
+      if (!m.id || !m.type) {
+        m.id = m.id || createMessageId();
+        m.type = m.role === 'user' ? 'incoming' : m.role === 'bot' ? 'ai-reply' : (m.type || 'incoming');
+        m.from = m.from || (m.role === 'user' ? number : m.role === 'bot' ? 'IA' : 'Sistema');
+        m.number = m.number || number;
+        m.timestamp = m.timestamp || m.ts || new Date().toISOString();
+        delete m.role;
+        delete m.ts;
+        migrated++;
+      }
+    }
+  }
+  if (migrated > 0) {
+    saveConversations();
+    log(`Migrados ${migrated} mensajes viejos al nuevo formato`);
+  }
 }
 
 // ===== HELPERS =====
@@ -369,6 +394,14 @@ app.delete('/api/conversations/:number', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/purge-conversations', (req, res) => {
+  conversations = {};
+  saveConversations();
+  io.emit('conversations', conversations);
+  log('Todas las conversaciones han sido eliminadas');
+  res.json({ success: true, message: 'Conversaciones eliminadas' });
+});
+
 // ===== DISCONNECT / RESTART =====
 app.post('/api/disconnect', async (req, res) => {
   try {
@@ -465,7 +498,12 @@ io.on('connection', (socket) => {
   socket.on('set-bot-enabled', (data) => {
     const num = normalizeNumber(data.number);
     const c = contacts.find(x => normalizeNumber(x.number) === num);
-    if (c) { c.botEnabled = Boolean(data.enabled); saveContacts(); emitContacts(); }
+    if (c) {
+      c.botEnabled = Boolean(data.enabled);
+      saveContacts();
+      emitContacts();
+      log(`Bot ${data.enabled ? 'habilitado' : 'deshabilitado'} para ${num} (${c.name || 'sin nombre'})`);
+    }
   });
 
   socket.on('add-contact', (data) => {
@@ -748,6 +786,7 @@ async function startBot() {
   }
 
   writeDeployMarker();
+  migrateOldMessages();
 
   // Heartbeat: actualizar lock cada 15s + check deploy marker
   const heartbeatInterval = setInterval(() => {

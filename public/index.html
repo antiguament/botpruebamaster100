@@ -2070,6 +2070,26 @@
             box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
         }
 
+        .config-danger-btn {
+            width: 100%;
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .config-danger-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+            transform: translateY(-1px);
+        }
+
         .config-success {
             text-align: center;
             padding: 8px;
@@ -2385,6 +2405,11 @@
                 <input class="config-textarea" id="botMaxTokens" type="number" value="250" min="50" max="1000" style="min-height:auto;" />
                 <button class="config-save-btn" id="saveBotConfig" style="margin-top:10px;">Guardar bot</button>
                 <div id="botConfigSuccess" style="display: none;"></div>
+
+                <h4 style="margin-top:22px; color:#ef4444;"><i class="fas fa-trash-alt"></i> Zona de peligro</h4>
+                <p style="font-size:11px; color:#7a8a9e; margin-bottom:10px;">Eliminará todas las conversaciones del historial. Los contactos se mantendrán.</p>
+                <button class="config-danger-btn" id="purgeConversationsBtn"><i class="fas fa-trash-alt"></i> Limpiar todas las conversaciones</button>
+                <div id="purgeSuccess" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -3491,6 +3516,24 @@
                     setTimeout(() => { msg.style.display = 'none'; }, 2500);
                 }
             });
+        });
+
+        document.getElementById('purgeConversationsBtn').addEventListener('click', () => {
+            if (!confirm('¿Eliminar TODAS las conversaciones? Esta acción no se puede deshacer.')) return;
+            if (!confirm('¿Estás completamente seguro? Se borrarán todos los mensajes de todos los contactos.')) return;
+            fetch('/api/purge-conversations', { method: 'POST' })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        conversations = {};
+                        renderConversation();
+                        const msg = document.getElementById('purgeSuccess');
+                        msg.textContent = 'Conversaciones eliminadas';
+                        msg.className = 'config-success';
+                        msg.style.display = 'block';
+                        setTimeout(() => { msg.style.display = 'none'; }, 2500);
+                    }
+                });
         });
 
         // === SIDEBAR HAMBURGER ===
