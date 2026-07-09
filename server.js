@@ -921,6 +921,12 @@ async function startBot() {
       // Guardar en historial
       addToHistory(number, 'user', body);
 
+      // Verificar si el bot está habilitado para este contacto
+      if (!contactEnabled(number)) {
+        log(`Bot deshabilitado para ${number}, sin respuesta automática`);
+        continue;
+      }
+
       // Intentar Mistral AI, si falla usar keywords
       let autoReply = null;
       if (MISTRAL_API_KEY) {
