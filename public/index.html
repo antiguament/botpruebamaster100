@@ -2146,6 +2146,27 @@
         .qr-overlay .qr-expired { color: #ef4444; font-size: 13px; font-weight: 600; display: none; }
         .qr-overlay .qr-hint { color: #4b5a6e; font-size: 11px; max-width: 300px; text-align: center; line-height: 1.4; }
 
+        .qr-request-btn {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+        }
+        .qr-request-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+        }
+        .qr-request-btn.visible { display: flex; }
+
         /* === HAMBURGER MENU (mobile) === */
         #openSidebar { display: none; }
         @media (max-width: 1100px) {
@@ -2160,10 +2181,11 @@
     <!-- QR Overlay -->
     <div class="qr-overlay" id="qrOverlay">
         <i class="fas fa-qrcode" style="font-size:40px; color:#a855f7;"></i>
-        <div class="qr-label">Escanea el código QR con WhatsApp</div>
+        <div class="qr-label" id="qrLabel">Escanea el código QR con WhatsApp</div>
         <img id="qrImage" src="" alt="QR Code" />
         <div class="qr-countdown" id="qrCountdown"></div>
         <div class="qr-expired" id="qrExpired"><i class="fas fa-exclamation-triangle"></i> QR expirado. Esperando nuevo código...</div>
+        <button class="qr-request-btn" id="requestQrBtn"><i class="fas fa-sync-alt"></i> Solicitar QR</button>
         <div class="qr-hint">Abre WhatsApp en tu teléfono → Menú → Dispositivos vinculados → Vincular dispositivo</div>
     </div>
 
@@ -2924,8 +2946,9 @@
                 badge.classList.add('connected');
             } else if (t.includes('qr') || t.includes('escanea')) {
                 badge.classList.add('qr');
-            } else if (t.includes('desconect') || t.includes('cerrado') || t.includes('error')) {
+            } else if (t.includes('desconect') || t.includes('cerrado') || t.includes('error') || t.includes('sesion cerrada') || t.includes('sesion desconectada')) {
                 badge.classList.add('disconnected');
+                showQrOverlay(text || 'Sesión cerrada');
             } else {
                 badge.classList.add('connecting');
             }
@@ -3330,18 +3353,24 @@
         const qrImage = document.getElementById('qrImage');
         const qrCountdown = document.getElementById('qrCountdown');
         const qrExpired = document.getElementById('qrExpired');
+        const qrLabel = document.getElementById('qrLabel');
+        const requestQrBtn = document.getElementById('requestQrBtn');
         let qrTimer = null;
         let qrTimeLeft = 0;
 
         socket.on('qr-code', (dataUrl) => {
             if (dataUrl) {
                 qrImage.src = dataUrl;
+                qrImage.style.display = '';
                 qrOverlay.classList.add('active');
                 qrExpired.style.display = 'none';
                 qrCountdown.style.display = '';
+                qrLabel.textContent = 'Escanea el código QR con WhatsApp';
+                requestQrBtn.classList.remove('visible');
                 startQrCountdown();
             } else {
                 qrOverlay.classList.remove('active');
+                qrImage.style.display = 'none';
                 stopQrCountdown();
             }
         });
@@ -3357,6 +3386,9 @@
                     stopQrCountdown();
                     qrCountdown.style.display = 'none';
                     qrExpired.style.display = '';
+                    qrLabel.textContent = 'QR expirado o sesión cerrada';
+                    qrImage.style.display = 'none';
+                    requestQrBtn.classList.add('visible');
                 }
             }, 1000);
         }
@@ -3373,6 +3405,30 @@
             else qrCountdown.style.color = '#fbbf24';
         }
 
+        function showQrOverlay(message) {
+            qrLabel.textContent = message || 'Conectando...';
+            qrImage.style.display = 'none';
+            qrCountdown.style.display = 'none';
+            qrExpired.style.display = 'none';
+            requestQrBtn.classList.add('visible');
+            qrOverlay.classList.add('active');
+        }
+
+        requestQrBtn.addEventListener('click', async () => {
+            requestQrBtn.disabled = true;
+            requestQrBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            try {
+                const res = await fetch('/api/disconnect', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    qrLabel.textContent = 'Generando nuevo QR...';
+                    qrExpired.style.display = 'none';
+                }
+            } catch (e) { console.error('Request QR error:', e); }
+            requestQrBtn.disabled = false;
+            requestQrBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Solicitar QR';
+        });
+
         // === DISCONNECT / RESTART ===
         document.getElementById('disconnectBtn').addEventListener('click', async () => {
             if (!confirm('¿Desconectar WhatsApp? Se cerrará la sesión actual.')) return;
@@ -3380,6 +3436,7 @@
                 const res = await fetch('/api/disconnect', { method: 'POST' });
                 const data = await res.json();
                 if (data.success) {
+                    showQrOverlay('Desconectando... Espera unos segundos');
                     const div = document.createElement('div');
                     div.className = 'msg system';
                     div.textContent = 'Desconectando WhatsApp...';
