@@ -5089,6 +5089,38 @@
       "number": "573147473629",
       "body": "¡Hola! 🌟 ¿En qué puedo ayudarte hoy? ¿Quieres vender por internet, necesitas acompañamiento o simplemente compartir algo del corazón? Estoy aquí para escucharte. 💙",
       "timestamp": "2026-07-06T16:34:00.282Z"
+    },
+    {
+      "id": "1783587935164-0739143a37883",
+      "type": "incoming",
+      "from": "n1artisty",
+      "number": "61264151716012",
+      "body": "[mensaje multimedia]",
+      "timestamp": "2026-07-09T09:05:35.164Z"
+    },
+    {
+      "id": "1783587936676-5c6436237a439",
+      "type": "incoming",
+      "from": "n1artisty",
+      "number": "61264151716012",
+      "body": "Hola",
+      "timestamp": "2026-07-09T09:05:36.676Z"
+    },
+    {
+      "id": "1783587937842-1a80c483bb964",
+      "type": "incoming",
+      "from": "n1artisty",
+      "number": "61264151716012",
+      "body": "Hola",
+      "timestamp": "2026-07-09T09:05:37.842Z"
+    },
+    {
+      "id": "1783587971500-112656af850ef",
+      "type": "incoming",
+      "from": "n1artisty",
+      "number": "61264151716012",
+      "body": "Para preguntar por nexus",
+      "timestamp": "2026-07-09T09:06:11.500Z"
     }
   ],
   "573128658195": [
@@ -5131,80 +5163,6 @@
       "number": "573128658195",
       "body": "¡Hola! ¿Cómo estás hoy? ¿En qué puedo ayudarte?",
       "timestamp": "2026-07-05T14:39:17.956Z"
-    }
-  ],
-  "61264151716012": [
-    {
-      "id": "1783587935164-0739143a37883",
-      "type": "incoming",
-      "from": "n1artisty",
-      "number": "61264151716012",
-      "body": "[mensaje multimedia]",
-      "timestamp": "2026-07-09T09:05:35.164Z"
-    },
-    {
-      "role": "user",
-      "body": "[mensaje multimedia]",
-      "ts": "2026-07-09T09:05:35.170Z"
-    },
-    {
-      "id": "1783587936676-5c6436237a439",
-      "type": "incoming",
-      "from": "n1artisty",
-      "number": "61264151716012",
-      "body": "Hola",
-      "timestamp": "2026-07-09T09:05:36.676Z"
-    },
-    {
-      "role": "user",
-      "body": "Hola",
-      "ts": "2026-07-09T09:05:36.684Z"
-    },
-    {
-      "id": "1783587937842-1a80c483bb964",
-      "type": "incoming",
-      "from": "n1artisty",
-      "number": "61264151716012",
-      "body": "Hola",
-      "timestamp": "2026-07-09T09:05:37.842Z"
-    },
-    {
-      "role": "user",
-      "body": "Hola",
-      "ts": "2026-07-09T09:05:37.847Z"
-    },
-    {
-      "role": "bot",
-      "body": "¡Qué bonito compartir ese momento con tu familia! 🌟\nLa Navidad es como un árbol de Navidad: más brillante cuando se comparte con quienes amamos.\n\n¿Cómo está el ánimo de tu equipo este año? 😊\n(¡Y si necesitas algo para celebrar o vender más, aquí estoy! 🎄✨)",
-      "ts": "2026-07-09T09:05:38.489Z"
-    },
-    {
-      "role": "bot",
-      "body": "¡Buenos días! 🌞 ¿En qué puedo ayudarte hoy? ¿Vienes por tu negocio, necesitas inspiración o quieres algo más? Estoy aquí para lo que necesites. 😊\n\n*(Si es por ventas digitales, dime qué tipo de negocio tienes y te ayudo con lo mejor para ti. Si es otro tema, aquí estoy también).*",
-      "ts": "2026-07-09T09:05:38.506Z"
-    },
-    {
-      "role": "bot",
-      "body": "¡Buenos días! 🌞 ¿En qué puedo ayudarte hoy? ¿Quieres vender por internet, necesitas inspiración o simplemente charlar? Estoy aquí para lo que necesites. 😊\n\n*(Dime: ¿qué te trae por aquí?)*",
-      "ts": "2026-07-09T09:05:39.164Z"
-    },
-    {
-      "id": "1783587971500-112656af850ef",
-      "type": "incoming",
-      "from": "n1artisty",
-      "number": "61264151716012",
-      "body": "Para preguntar por nexus",
-      "timestamp": "2026-07-09T09:06:11.500Z"
-    },
-    {
-      "role": "user",
-      "body": "Para preguntar por nexus",
-      "ts": "2026-07-09T09:06:11.504Z"
-    },
-    {
-      "role": "bot",
-      "body": "¡Ah, perfecto! **NEXUS** es tu aliado para llevar tu negocio al siguiente nivel 🚀.\n¿Qué necesitas hoy?\n- ¿Quieres **vender por internet**? (Tienda online, landing page, etc.)\n- ¿Necesitas **diseñar tu presencia digital** desde cero?\n- ¿O prefieres **optimizar lo que ya tienes**?\n\nDime en qué área te ayudo y te doy una solución **personalizada y sin complicaciones**. 😊\n\n*(Ejemplo: \"Tengo una tienda de ropa y quiero vender por WhatsApp\", \"Necesito una página web para mi consultorio\", etc.)*\n\n¡Estoy listo! 💪",
-      "ts": "2026-07-09T09:06:15.488Z"
     }
   ]
 }

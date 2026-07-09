@@ -98,6 +98,48 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+async function resolveNumber(msg) {
+  const jid = msg.key.remoteJid;
+
+  if (jid?.endsWith('@c.us')) {
+    return normalizeNumber(jid);
+  }
+
+  if (jid?.endsWith('@lid')) {
+    if (msg.key.remoteJidAlt) {
+      const pn = msg.key.remoteJidAlt.split('@')[0].split(':')[0];
+      if (pn && /^\d{7,15}$/.test(pn)) {
+        lidToPhoneMap.set(jid, msg.key.remoteJidAlt);
+        return pn;
+      }
+    }
+
+    const mapped = lidToPhoneMap.get(jid);
+    if (mapped) {
+      const pn = mapped.split('@')[0].split(':')[0];
+      if (pn && /^\d{7,15}$/.test(pn)) return pn;
+    }
+
+    try {
+      const phoneJid = await sock?.signalRepository?.lidMapping?.getPNForLID(jid);
+      if (phoneJid) {
+        const pn = phoneJid.split('@')[0].split(':')[0];
+        if (pn && /^\d{7,15}$/.test(pn)) {
+          lidToPhoneMap.set(jid, phoneJid);
+          return pn;
+        }
+      }
+    } catch (e) {
+      log(`Error resolviendo LID ${jid}: ${e.message}`);
+    }
+
+    log(`WARNING: No se pudo resolver LID ${jid}, usando como numero`);
+    return normalizeNumber(jid);
+  }
+
+  return normalizeNumber(jid || '');
+}
+
 function getAutoReply(message) {
   const lower = message.toLowerCase().trim();
   if (/^(hola|buenos dias|buenas tardes|buenas noches|hey|que tal|saludos|hello|hi)$/i.test(lower))
@@ -606,6 +648,7 @@ const LOCK_FILE = path.join(__dirname, '.bot.lock');
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 const DEPLOY_MARKER = path.join(__dirname, '.deploy.marker');
 const MY_START_TIME = Date.now();
+const lidToPhoneMap = new Map();
 
 function acquireLock() {
   if (fs.existsSync(LOCK_FILE)) {
@@ -826,6 +869,24 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds);
 
+  sock.ev.on('lid-mapping.update', ({ lid, pn }) => {
+    if (lid && pn) {
+      lidToPhoneMap.set(lid, pn);
+      log(`LID mapping actualizado: ${lid} → ${pn}`);
+    }
+  });
+
+  sock.ev.on('contacts.upsert', (upsertContacts) => {
+    for (const c of upsertContacts) {
+      if (c.lid && c.phoneNumber) {
+        lidToPhoneMap.set(c.lid, c.phoneNumber);
+      }
+      if (c.id?.endsWith('@lid') && c.phoneNumber) {
+        lidToPhoneMap.set(c.id, c.phoneNumber);
+      }
+    }
+  });
+
   sock.ev.on('messages.upsert', async (m) => {
     if (m.type !== 'notify') return;
 
@@ -834,7 +895,7 @@ async function startBot() {
       if (!msg.key.remoteJid || (!msg.key.remoteJid.endsWith('@c.us') && !msg.key.remoteJid.endsWith('@lid'))) continue;
 
       const from = msg.key.remoteJid;
-      const number = normalizeNumber(from);
+      const number = await resolveNumber(msg);
       const body = msg.message?.conversation
         || msg.message?.extendedTextMessage?.text
         || msg.message?.buttonsResponseMessage?.selectedButtonId
